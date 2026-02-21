@@ -21,8 +21,8 @@ import {
 } from 'lucide-react';
 
 import type { EnergyMode, CalcResult, SelectedLocation, ProductType, PVGISResult, WindResult } from './types';
-import { fetchSolarData, fetchWindData, runQuickScan } from './api';
-import { calculateROI, type CalculatorParams } from './calculator';
+import { runQuickScan } from './api';
+import type { CalculatorParams } from './calculator';
 import MapCanvas from './components/MapCanvas';
 import AnalyticsPanel from './components/AnalyticsPanel';
 import OfferModal from './components/OfferModal';
@@ -113,30 +113,7 @@ export default function App() {
     setLoading(true);
     setError(null);
     try {
-      // Fetch base environmental data (always needed for the product scaling)
-      // We'll use 1kWp as base peak power to get the location yield factors
-      const [solarRaw, windRaw] = await Promise.all([
-        fetchSolarData(location.lat, location.lon, 1, tiltAngle, azimuth),
-        fetchWindData(location.lat, location.lon)
-      ]);
-
-      // Note: fetchSolarData/fetchWindData currently return SolarCalcResult/WindCalcResult 
-      // but we need the raw response for more flexibility. 
-      // I'll make a quick adjustment in api.ts to return the raw PVGISResult/WindResult or I'll just re-fetch in calculator for now.
-      // Actually, I'll update api.ts to have raw fetchers.
-
-      // For now, let's assume we have what we need to pass to our calculator
-      // I need to fetch the RAW data from PVGIS to get monthly bars.
-      const pvgisUrl = `${BACKEND_URL}/pvgis`;
-      const pvgisRes = await axios.get<PVGISResult>(pvgisUrl, {
-        params: { lat: location.lat.toFixed(4), lon: location.lon.toFixed(4), peakpower: 1, loss: 14, angle: tiltAngle, aspect: azimuth, outputformat: 'json' }
-      });
-
-      const openMeteoRes = await axios.get<WindResult>('https://api.open-meteo.com/v1/forecast', {
-        params: { latitude: location.lat.toFixed(4), longitude: location.lon.toFixed(4), hourly: 'wind_speed_10m,wind_speed_100m,wind_direction_10m', forecast_days: 7, wind_speed_unit: 'ms' }
-      });
-
-      const params: CalculatorParams = {
+      const calcParams: CalculatorParams = {
         productType: product,
         investmentUSD,
         energyPrice: energyCost,
@@ -152,8 +129,13 @@ export default function App() {
         buildingHeight: location.height || 0
       };
 
-      const roiResult = calculateROI(params, pvgisRes.data, openMeteoRes.data);
-      setResult(roiResult);
+      const { data } = await axios.post<CalcResult>(`${BACKEND_URL}/calculate-roi`, {
+        lat: location.lat,
+        lon: location.lon,
+        params: calcParams
+      });
+
+      setResult(data);
 
     } catch (e) {
       console.error(e);
