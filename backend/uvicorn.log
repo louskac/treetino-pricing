@@ -1,0 +1,68 @@
+INFO:     Will watch for changes in these directories: ['/Users/jakublustyk/treetino-app/backend']
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [15617] using StatReload
+INFO:     Started server process [15667]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     127.0.0.1:55844 - "GET /docs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55844 - "GET /openapi.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55844 - "GET /openapi.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55876 - "OPTIONS /calculate-roi HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55874 - "GET /pvgis?lat=50.0800&lon=14.4200&peakpower=1&loss=14&outputformat=json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55876 - "POST /calculate-roi HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55963 - "GET /pvgis?lat=50.0800&lon=14.4200&peakpower=1&loss=14&outputformat=json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55992 - "POST /calculate-roi HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56363 - "GET /pvgis?lat=50.0799&lon=14.4206&peakpower=1&loss=14&outputformat=json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56363 - "GET /pvgis?lat=50.0778&lon=14.4200&peakpower=1&loss=14&outputformat=json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56363 - "OPTIONS /calculate-roi HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56363 - "POST /calculate-roi HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56425 - "GET /pvgis?lat=50.0753&lon=14.4139&peakpower=1&loss=14&outputformat=json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56425 - "GET /pvgis?lat=50.0755&lon=14.4140&peakpower=1&loss=14&outputformat=json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56425 - "GET /pvgis?lat=50.0738&lon=14.4165&peakpower=1&loss=14&outputformat=json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56425 - "GET /pvgis?lat=50.0740&lon=14.4173&peakpower=1&loss=14&outputformat=json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56425 - "GET /pvgis?lat=50.0740&lon=14.4168&peakpower=1&loss=14&outputformat=json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56425 - "GET /pvgis?lat=50.0741&lon=14.4170&peakpower=1&loss=14&outputformat=json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56425 - "GET /pvgis?lat=50.0741&lon=14.4173&peakpower=1&loss=14&outputformat=json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56425 - "GET /pvgis?lat=50.0743&lon=14.4165&peakpower=1&loss=14&outputformat=json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56425 - "GET /pvgis?lat=50.0743&lon=14.4163&peakpower=1&loss=14&outputformat=json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56425 - "GET /pvgis?lat=50.0743&lon=14.4161&peakpower=1&loss=14&outputformat=json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56425 - "GET /pvgis?lat=50.0742&lon=14.4164&peakpower=1&loss=14&outputformat=json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56425 - "GET /pvgis?lat=50.0742&lon=14.4159&peakpower=1&loss=14&outputformat=json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56425 - "GET /pvgis?lat=50.0745&lon=14.4164&peakpower=1&loss=14&outputformat=json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56425 - "GET /pvgis?lat=50.0750&lon=14.4167&peakpower=1&loss=14&outputformat=json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56425 - "GET /pvgis?lat=50.0751&lon=14.4166&peakpower=1&loss=14&outputformat=json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56425 - "GET /pvgis?lat=50.0750&lon=14.4161&peakpower=1&loss=14&outputformat=json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56425 - "GET /pvgis?lat=50.0750&lon=14.4157&peakpower=1&loss=14&outputformat=json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56425 - "GET /pvgis?lat=50.0749&lon=14.4156&peakpower=1&loss=14&outputformat=json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56425 - "GET /pvgis?lat=50.0746&lon=14.4157&peakpower=1&loss=14&outputformat=json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56425 - "GET /pvgis?lat=50.0743&lon=14.4152&peakpower=1&loss=14&outputformat=json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56425 - "GET /pvgis?lat=50.0744&lon=14.4151&peakpower=1&loss=14&outputformat=json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56425 - "GET /pvgis?lat=50.0745&lon=14.4152&peakpower=1&loss=14&outputformat=json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56425 - "GET /pvgis?lat=50.0743&lon=14.4152&peakpower=1&loss=14&outputformat=json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56425 - "GET /pvgis?lat=50.0745&lon=14.4151&peakpower=1&loss=14&outputformat=json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56425 - "GET /pvgis?lat=50.0745&lon=14.4147&peakpower=1&loss=14&outputformat=json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56425 - "GET /pvgis?lat=50.0750&lon=14.4145&peakpower=1&loss=14&outputformat=json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56425 - "GET /pvgis?lat=50.0749&lon=14.4145&peakpower=1&loss=14&outputformat=json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56425 - "GET /pvgis?lat=50.0747&lon=14.4145&peakpower=1&loss=14&outputformat=json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56425 - "GET /pvgis?lat=50.0745&lon=14.4140&peakpower=1&loss=14&outputformat=json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56425 - "GET /pvgis?lat=50.0748&lon=14.4140&peakpower=1&loss=14&outputformat=json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56425 - "GET /pvgis?lat=50.0747&lon=14.4139&peakpower=1&loss=14&outputformat=json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56425 - "GET /pvgis?lat=50.0744&lon=14.4143&peakpower=1&loss=14&outputformat=json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56425 - "GET /pvgis?lat=50.0744&lon=14.4145&peakpower=1&loss=14&outputformat=json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56425 - "GET /pvgis?lat=50.0759&lon=14.4138&peakpower=1&loss=14&outputformat=json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56425 - "GET /pvgis?lat=50.0760&lon=14.4139&peakpower=1&loss=14&outputformat=json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56425 - "GET /pvgis?lat=50.0759&lon=14.4136&peakpower=1&loss=14&outputformat=json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56498 - "GET /pvgis?lat=50.0787&lon=14.4306&peakpower=1&loss=14&outputformat=json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56498 - "GET /pvgis?lat=50.0806&lon=14.4250&peakpower=1&loss=14&outputformat=json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56502 - "GET /pvgis?lat=50.0663&lon=14.4204&peakpower=1&loss=14&outputformat=json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56505 - "GET /pvgis?lat=50.0663&lon=14.4204&peakpower=1&loss=14&outputformat=json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56505 - "GET /pvgis?lat=50.0708&lon=14.4278&peakpower=1&loss=14&outputformat=json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56502 - "GET /pvgis?lat=50.0708&lon=14.4278&peakpower=1&loss=14&outputformat=json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56502 - "GET /pvgis?lat=50.0708&lon=14.4278&peakpower=1&loss=14&outputformat=json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56505 - "GET /pvgis?lat=50.0708&lon=14.4278&peakpower=1&loss=14&outputformat=json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56505 - "GET /pvgis?lat=50.0698&lon=14.4256&peakpower=1&loss=14&outputformat=json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56505 - "GET /pvgis?lat=50.0700&lon=14.4248&peakpower=1&loss=14&outputformat=json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56505 - "GET /pvgis?lat=50.0773&lon=14.4200&peakpower=1&loss=14&outputformat=json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56805 - "GET /pvgis?lat=50.0766&lon=14.4205&peakpower=1&loss=14&outputformat=json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56805 - "GET /pvgis?lat=50.0768&lon=14.4202&peakpower=1&loss=14&outputformat=json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56805 - "GET /pvgis?lat=50.0768&lon=14.4202&peakpower=1&loss=14&outputformat=json HTTP/1.1" 200 OK

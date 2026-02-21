@@ -17,6 +17,12 @@ export default {
           900: '#0f172a',
           950: '#020617',
         },
+        treetino: {
+          light: '#2762AD',
+          middle: '#183D89',
+          dark: '#2A293A',
+          accent: '#E8F1FF',
+        },
         emerald: {
           400: '#34d399',
           500: '#10b981',
@@ -27,6 +33,11 @@ export default {
           500: '#8b5cf6',
           600: '#7c3aed',
         },
+      },
+      boxShadow: {
+        'hyperglow': '0 0 20px rgba(39, 98, 173, 0.3)',
+        'softdepth': '0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3)',
+        'innerlight': 'inset 0 1px 1px 0 rgba(255, 255, 255, 0.05)',
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],

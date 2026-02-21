@@ -34,7 +34,7 @@ const HIGHLIGHT_LAYER: mapboxgl.FillExtrusionLayer = {
     source: 'highlight-source',
     type: 'fill-extrusion',
     paint: {
-        'fill-extrusion-color': '#10b981',
+        'fill-extrusion-color': '#2762AD',
         'fill-extrusion-height': ['get', 'height'],
         'fill-extrusion-base': ['get', 'min_height'],
         'fill-extrusion-opacity': 0.85,
@@ -183,10 +183,10 @@ export default function MapCanvas({ onLocationSelect, selectedLocation }: Props)
                         offset={45}
                         closeButton={false}
                         closeOnClick={false}
-                        className="z-50"
+                        className="z-50 neo-panel"
                     >
                         <div className="space-y-2">
-                            <div className="flex items-center gap-2 text-[10px] font-bold text-emerald-400 uppercase tracking-wider">
+                            <div className="flex items-center gap-2 text-[10px] font-black text-treetino-light uppercase tracking-[0.2em]">
                                 <Sparkles className="w-3 h-3" /> Spot Evaluated
                             </div>
                             <div className="grid grid-cols-2 gap-4">
@@ -252,8 +252,8 @@ function PinOverlay({ lat, lng, mapRef }: { lat: number; lng: number; mapRef: Re
             className="absolute z-20 pointer-events-none"
             style={{ left: pos.x - 16, top: pos.y - 40 }}
         >
-            <MapPin className="w-8 h-8 text-emerald-500 drop-shadow-lg fill-emerald-500/20" />
-            <div className="mt-0.5 text-[9px] font-mono text-emerald-400/80 text-center whitespace-nowrap">
+            <MapPin className="w-8 h-8 text-treetino-light drop-shadow-[0_4px_8px_rgba(39,98,173,0.5)] fill-treetino-light/20" />
+            <div className="mt-0.5 text-[9px] font-black text-treetino-light bg-slate-950/80 px-2 py-0.5 rounded-md border border-treetino-light/30 text-center whitespace-nowrap">
                 {lat.toFixed(4)}°N, {lng.toFixed(4)}°E
             </div>
         </motion.div>

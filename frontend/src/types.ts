@@ -67,6 +67,7 @@ export interface ROIResult {
     // Specs
     numberOfLeaves: number;
     numberOfTurbines: number;
+    lastWeekKwh: number; // Added
 
     // Future Revenue
     futureEvRevenue: number;

@@ -1,8 +1,7 @@
 import { motion } from 'framer-motion';
-import { Sun, Wind, TrendingUp, Leaf, Car, TreePine, Shield, Globe, Compass } from 'lucide-react';
+import { Sun, Wind, TrendingUp, Leaf, Car, TreePine, Shield, Globe, Zap, Sparkles } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import type { CalcResult, ROIResult } from '../types';
-import { Sparkles } from 'lucide-react';
 
 interface Props {
     result: CalcResult;
@@ -14,7 +13,7 @@ interface Props {
 export default function AnalyticsPanel({ result, energyCost, web3Enabled, esgEnabled }: Props) {
     const totalKwh = result.annualSolarKwh + result.annualWindKwh;
     const annualSavings = result.totalAnnualRevenue;
-    const co2Offset = Math.round(totalKwh * 0.0004 * 10) / 10; // 0.4 kg CO₂/kWh EU avg → tons
+    const co2Offset = Math.round(totalKwh * 0.0004 * 10) / 10;
     const treesEquiv = Math.round(co2Offset * 50);
     const evKm = Math.round(co2Offset * 8000).toLocaleString();
 
@@ -25,98 +24,94 @@ export default function AnalyticsPanel({ result, energyCost, web3Enabled, esgEna
 
     return (
         <motion.div
-            initial={{ y: 60, opacity: 0 }}
+            initial={{ y: 50, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 60, opacity: 0 }}
+            exit={{ y: 50, opacity: 0 }}
             transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-            className="absolute bottom-5 left-5 right-[22rem] z-30 grid grid-cols-3 gap-3"
+            className="grid grid-cols-3 gap-6 w-full h-[320px]"
         >
             {/* Card 1: Production (Stacked Solar & Wind) */}
-            <div className="glass-panel p-4">
-                <EnergyChart data={result.monthlyData} totalKwh={totalKwh} />
+            <div className="neo-panel p-6 bg-slate-900 overflow-hidden relative group">
+                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <Zap className="w-16 h-16 text-treetino-light" />
+                </div>
+                <EnergyChart data={result.monthlyData} totalKwh={totalKwh} lastWeekKwh={result.lastWeekKwh} />
             </div>
 
             {/* Card 2: Economics */}
-            <div className="glass-panel p-4">
-                <div className="flex items-center gap-2 mb-3">
-                    <div className="w-6 h-6 rounded-md bg-emerald-500/10 flex items-center justify-center">
-                        <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
+            <div className="neo-panel p-6 bg-slate-900 flex flex-col gap-6">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <TrendingUp className="w-5 h-5 text-treetino-light" />
+                        <h3 className="text-sm font-black text-white uppercase tracking-tight">Financials</h3>
                     </div>
-                    <h3 className="text-xs font-semibold text-white">Economics</h3>
                 </div>
-                <div className="space-y-3">
-                    <div>
-                        <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-0.5">Total Investment</p>
-                        <p className="text-2xl font-bold text-white">€{investment.toLocaleString()}</p>
-                    </div>
-                    <div className="h-px bg-slate-700/30" />
-                    <div>
-                        <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-0.5">ROI Period</p>
-                        <p className={`text-2xl font-bold ${web3Enabled ? 'text-violet-400' : 'text-emerald-400'}`}>
-                            {paybackYears} years
+
+                <div className="space-y-4">
+                    <div className="p-4 rounded-xl border border-white/10 bg-slate-950/50" style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
+                        <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-1">ROI Period</p>
+                        <p className="text-3xl font-black text-treetino-light">
+                            {paybackYears} <span className="text-xs uppercase">Years</span>
                         </p>
-                        <p className="text-[10px] text-slate-500 mt-0.5">
-                            {roiPercentage}% annual yield
-                        </p>
-                        {web3Enabled && (
-                            <p className="text-[10px] text-violet-400 mt-0.5 flex items-center gap-1">
-                                <Globe className="w-3 h-3" /> 15% P2P bonus applied
-                            </p>
-                        )}
+                        <div className="flex items-center gap-2 mt-1">
+                            <span className="text-[10px] font-bold text-slate-400">{roiPercentage}% Yield</span>
+                            {web3Enabled && (
+                                <span className="neo-badge">P2P Bonus</span>
+                            )}
+                        </div>
                     </div>
-                    <div className="h-px bg-slate-700/30" />
-                    <div>
-                        <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-0.5">Annual Savings</p>
-                        <p className="text-lg font-semibold text-white">€{annualSavings.toLocaleString()}</p>
-                        <p className="text-[10px] text-slate-500">at €{energyCost.toFixed(2)}/kWh · {Math.round(totalKwh).toLocaleString()} kWh/yr</p>
+
+                    <div className="flex flex-col gap-2 mt-auto pt-2 border-t border-white/5">
+                        <div className="flex justify-between items-center">
+                            <p className="text-[9px] text-slate-500 font-extrabold uppercase tracking-tight">Investment</p>
+                            <p className="text-sm font-black text-white">{investment.toLocaleString()} CZK</p>
+                        </div>
+                        <div className="flex justify-between items-center">
+                            <p className="text-[9px] text-slate-500 font-extrabold uppercase tracking-tight">Savings/YR</p>
+                            <p className="text-sm font-black text-treetino-accent">{annualSavings.toLocaleString()} CZK</p>
+                        </div>
                     </div>
                 </div>
             </div>
 
             {/* Card 3: ESG */}
-            <div className="glass-panel p-4">
-                <div className="flex items-center gap-2 mb-3">
-                    <div className="w-6 h-6 rounded-md bg-emerald-500/10 flex items-center justify-center">
-                        <Leaf className="w-3.5 h-3.5 text-emerald-400" />
+            <div className="neo-panel p-6 bg-slate-900 flex flex-col gap-6">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <Leaf className="w-5 h-5 text-treetino-light" />
+                        <h3 className="text-sm font-black text-white uppercase tracking-tight">Eco Impact</h3>
                     </div>
-                    <h3 className="text-xs font-semibold text-white">ESG Impact</h3>
+                    {esgEnabled && <Shield className="w-4 h-4 text-treetino-light" />}
                 </div>
-                <div className="space-y-3">
-                    <div>
-                        <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-0.5">CO₂ Offset / Year</p>
-                        <p className="text-2xl font-bold text-emerald-400">
-                            {co2Offset.toFixed(1)} <span className="text-sm font-normal text-slate-500">tons</span>
+
+                <div className="space-y-5">
+                    <div className="p-4 rounded-xl border border-white/10 bg-slate-950/50" style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
+                        <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-1">CO₂ Offset</p>
+                        <p className="text-3xl font-black text-white">
+                            {co2Offset.toFixed(1)} <span className="text-xs uppercase">Tons/YR</span>
                         </p>
                     </div>
-                    <div className="h-px bg-slate-700/30" />
-                    <div className="space-y-2.5">
-                        <p className="text-[10px] text-slate-500 uppercase tracking-wider">Equivalent To</p>
-                        <div className="flex items-start gap-3">
-                            <div className="mt-0.5 w-6 h-6 rounded-lg bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
-                                <TreePine className="w-3 h-3 text-emerald-400" />
+
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-4">
+                            <div className="w-8 h-8 rounded-lg bg-treetino-light/10 border-2 border-treetino-light/20 flex items-center justify-center shrink-0">
+                                <TreePine className="w-4 h-4 text-treetino-light" />
                             </div>
                             <div>
-                                <p className="text-sm font-semibold text-white">{treesEquiv.toLocaleString()}</p>
-                                <p className="text-[10px] text-slate-500">Trees Planted</p>
+                                <p className="text-sm font-black text-white leading-none">{treesEquiv.toLocaleString()}</p>
+                                <p className="text-[9px] text-slate-500 font-bold uppercase tracking-tighter">Trees Equivalent</p>
                             </div>
                         </div>
-                        <div className="flex items-start gap-3">
-                            <div className="mt-0.5 w-6 h-6 rounded-lg bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
-                                <Car className="w-3 h-3 text-emerald-400" />
+                        <div className="flex items-center gap-4">
+                            <div className="w-8 h-8 rounded-lg bg-treetino-light/10 border-2 border-treetino-light/20 flex items-center justify-center shrink-0">
+                                <Car className="w-4 h-4 text-treetino-light" />
                             </div>
                             <div>
-                                <p className="text-sm font-semibold text-white">{evKm} km</p>
-                                <p className="text-[10px] text-slate-500">Driven in an EV</p>
+                                <p className="text-sm font-black text-white leading-none">{evKm} KM</p>
+                                <p className="text-[9px] text-slate-500 font-bold uppercase tracking-tighter">EV Range Offset</p>
                             </div>
                         </div>
                     </div>
-                    {esgEnabled && (
-                        <div className="mt-1 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                            <p className="text-[10px] text-emerald-400 flex items-center gap-1.5">
-                                <Shield className="w-3 h-3" /> ESG Certificate included
-                            </p>
-                        </div>
-                    )}
                 </div>
             </div>
         </motion.div>
@@ -124,35 +119,61 @@ export default function AnalyticsPanel({ result, energyCost, web3Enabled, esgEna
 }
 
 // ─── Energy Chart (Stacked Solar & Wind) ───────────────────
-function EnergyChart({ data, totalKwh }: { data: ROIResult['monthlyData']; totalKwh: number }) {
+function EnergyChart({ data, totalKwh, lastWeekKwh }: { data: ROIResult['monthlyData']; totalKwh: number; lastWeekKwh: number }) {
     return (
-        <>
-            <div className="flex items-center gap-2 mb-3">
-                <div className="w-6 h-6 rounded-md bg-emerald-500/10 flex items-center justify-center">
-                    <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+        <div className="h-full flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-treetino-light/10 border-2 border-treetino-light/20 flex items-center justify-center">
+                        <Sparkles className="w-4 h-4 text-treetino-light" />
+                    </div>
+                    <h3 className="text-sm font-black text-white uppercase tracking-tight">Energy Stack</h3>
                 </div>
-                <h3 className="text-xs font-semibold text-white">Monthly Energy Stack</h3>
+                <div className="flex flex-col text-right">
+                    <span className="text-[9px] text-slate-500 font-black uppercase tracking-tighter block">LAST WEEK</span>
+                    <span className="text-sm font-black text-treetino-accent">{lastWeekKwh.toLocaleString()} kWh</span>
+                    <span className="text-[8px] text-slate-600 font-bold uppercase mt-1">REAL DATA BLEND</span>
+                </div>
             </div>
-            <div className="h-36">
+
+            <div className="flex-1 min-h-[140px]">
                 <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={data}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(51,65,85,0.3)" vertical={false} />
-                        <XAxis dataKey="month" tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                        <YAxis tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} width={40}
-                            tickFormatter={(v: number) => `${Math.round(v)}`} />
-                        <Tooltip contentStyle={{ background: 'rgba(15,23,42,0.95)', border: '1px solid rgba(51,65,85,0.5)', borderRadius: '12px', fontSize: '11px', color: '#fff' }}
-                            formatter={(v, name) => [`${Number(v).toLocaleString()} kWh`, name === 'solar' ? 'Solar' : 'Wind']} />
-                        <Legend wrapperStyle={{ fontSize: '9px', paddingTop: '10px' }} iconSize={8} />
-                        <Bar dataKey="solar" name="Solar" stackId="a" fill="#f59e0b" radius={[0, 0, 0, 0]} />
-                        <Bar dataKey="wind" name="Wind" stackId="a" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                    <BarChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="0" stroke="#1e293b" vertical={false} />
+                        <XAxis
+                            dataKey="month"
+                            tick={{ fontSize: 9, fill: '#64748b', fontWeight: 900 }}
+                            axisLine={false}
+                            tickLine={false}
+                        />
+                        <YAxis
+                            tick={{ fontSize: 9, fill: '#64748b', fontWeight: 900 }}
+                            axisLine={false}
+                            tickLine={false}
+                            width={40}
+                            tickFormatter={(v: number) => `${Math.round(v)}`}
+                        />
+                        <Tooltip
+                            cursor={{ fill: 'rgba(51, 65, 85, 0.2)' }}
+                            contentStyle={{
+                                background: 'rgba(15, 23, 42, 0.95)',
+                                backdropFilter: 'blur(12px)',
+                                border: '1px solid rgba(255, 255, 255, 0.1)',
+                                borderRadius: '12px',
+                                fontSize: '11px',
+                                color: '#fff',
+                                boxShadow: '0 10px 25px rgba(0,0,0,0.5)'
+                            }}
+                            itemStyle={{ fontWeight: 800, textTransform: 'uppercase', fontSize: '10px' }}
+                            formatter={(v, name) => [`${Number(v).toLocaleString()} kWh`, name]}
+                        />
+                        <Legend wrapperStyle={{ fontSize: '9px', fontWeight: 900, textTransform: 'uppercase', paddingTop: '15px' }} iconType="rect" iconSize={8} />
+                        <Bar dataKey="solar" name="Solar" stackId="a" fill="#2762AD" />
+                        <Bar dataKey="wind" name="Wind" stackId="a" fill="#E8F1FF" />
                     </BarChart>
                 </ResponsiveContainer>
             </div>
-            <p className="mt-1.5 text-[10px] text-slate-500">
-                Total generated: {Math.round(totalKwh).toLocaleString()} kWh/year
-            </p>
-        </>
+        </div>
     );
 }
 
-// WindChart and SolarChart can be removed as they are specialized for previous version.

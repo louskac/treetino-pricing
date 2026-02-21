@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
-import { X, TreePine, Wind as WindIcon } from 'lucide-react';
-import type { CalcResult, EnergyMode, SelectedLocation } from '../types';
+import { X, Zap, FileText, Calendar, Shield, Globe } from 'lucide-react';
+import type { CalcResult, SelectedLocation } from '../types';
 
 interface Props {
     result: CalcResult;
@@ -11,10 +11,25 @@ interface Props {
     onClose: () => void;
 }
 
+declare global {
+    namespace JSX {
+        interface IntrinsicElements {
+            'model-viewer': React.DetailedHTMLProps<
+                React.HTMLAttributes<HTMLElement> & {
+                    src?: string; alt?: string; 'auto-rotate'?: boolean | string;
+                    'camera-controls'?: boolean | string; 'shadow-intensity'?: string;
+                    exposure?: string; loading?: string; ar?: boolean | string;
+                },
+                HTMLElement
+            >;
+        }
+    }
+}
+
 function quoteId(): string {
     const c = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     const seg = (n: number) => Array.from({ length: n }, () => c[Math.floor(Math.random() * c.length)]).join('');
-    return `TRT-${seg(4)}-${seg(4)}-${seg(4)}`;
+    return `TRT-${seg(4)}-${seg(4)}`;
 }
 
 export default function OfferModal({ result, location, energyCost, web3Enabled, esgEnabled, onClose }: Props) {
@@ -24,19 +39,21 @@ export default function OfferModal({ result, location, energyCost, web3Enabled, 
     const baseCost = result.investment;
     const roi = result.paybackPeriod;
 
-    const rows: [string, string][] = [
-        ['Location', `${location.lat.toFixed(4)}°N, ${location.lon.toFixed(4)}°E`],
-        ['System Size', `${result.numberOfLeaves} Leaves / ${result.numberOfTurbines} Turbines`],
+    const summaryItems = [
+        { label: 'System Size', value: `${result.numberOfLeaves} Leaves / ${result.numberOfTurbines} Turbines`, icon: Zap },
+        { label: 'Annual Output', value: `${Math.round(totalKwh).toLocaleString()} kWh`, icon: Zap },
+        { label: 'Investment', value: `${baseCost.toLocaleString()} CZK`, icon: FileText },
+        { label: 'ROI Period', value: `${roi} Years`, icon: Calendar },
+    ];
+
+    const techRows: [string, string][] = [
+        ['Coordinates', `${location.lat.toFixed(4)}°N, ${location.lon.toFixed(4)}°E`],
         ...(location.roofArea ? [['Est. Roof Area', `${location.roofArea} m²`] as [string, string]] : []),
-        ['Annual Production', `${Math.round(totalKwh).toLocaleString()} kWh`],
-        ['Energy Price', `€${energyCost.toFixed(2)}/kWh`],
-        ['Total Investment', `€${baseCost.toLocaleString()}`],
-        ['ROI Period', `${roi} years`],
-        ['Annual Revenue', `€${annualSavings.toLocaleString()}`],
-        ['Secondary Revenue', `€${result.totalFutureRevenue.toLocaleString()}/yr`],
+        ['Energy Price', `${energyCost.toFixed(2)} CZK/kWh`],
+        ['Secondary Revenue', `${result.totalFutureRevenue.toLocaleString()} CZK/yr`],
         ['CO₂ Offset', `${co2.toFixed(1)} tons/year`],
-        ['Web3 P2P Trading', web3Enabled ? 'Enabled' : 'Disabled'],
-        ['ESG Certificate', esgEnabled ? 'Included' : 'Not included'],
+        ['Web3 P2P Grid', web3Enabled ? 'ACTIVE' : 'INACTIVE'],
+        ['ESG Certification', esgEnabled ? 'CERTIFIED' : 'NA'],
     ];
 
     return (
@@ -44,86 +61,114 @@ export default function OfferModal({ result, location, energyCost, web3Enabled, 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-8"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-6"
             onClick={onClose}
         >
             <motion.div
-                initial={{ scale: 0.95, y: 20, opacity: 0 }}
+                initial={{ scale: 0.9, y: 40, opacity: 0 }}
                 animate={{ scale: 1, y: 0, opacity: 1 }}
-                exit={{ scale: 0.95, y: 20, opacity: 0 }}
-                transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                exit={{ scale: 0.9, y: 40, opacity: 0 }}
+                transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
                 onClick={(e) => e.stopPropagation()}
-                className="glass-panel w-full max-w-3xl max-h-[85vh] overflow-y-auto p-8 border border-slate-700/60"
+                className="neo-panel w-full max-w-4xl max-h-[90vh] overflow-y-auto p-10 bg-slate-900 flex flex-col gap-8"
             >
                 {/* Header */}
-                <div className="flex items-start justify-between mb-6">
-                    <div>
-                        <div className="flex items-center gap-3 mb-2">
-                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center">
-                                <TreePine className="w-4 h-4 text-white" />
+                <div className="flex items-start justify-between">
+                    <div className="space-y-4">
+                        <img src="/branding/logo_horizontal.png" alt="Treetino Logo" className="h-10 w-auto filter brightness-0 invert" />
+                        <div className="space-y-1">
+                            <h2 className="text-2xl font-black text-white uppercase tracking-tight">Investment Quotation</h2>
+                            <div className="flex items-center gap-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                                <span className="text-treetino-light">Ref: {quoteId()}</span>
+                                <span>•</span>
+                                <span>{new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
                             </div>
-                            <div>
-                                <h2 className="text-lg font-bold text-white">Treetino Energy Quotation</h2>
-                                <p className="text-[10px] text-slate-500 uppercase tracking-wider">Official Offer Document</p>
-                            </div>
-                        </div>
-                        <div className="mt-2 flex items-center gap-4">
-                            <div className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-                                <span className="text-[10px] font-mono text-emerald-400">QUOTE {quoteId()}</span>
-                            </div>
-                            <span className="text-[10px] text-slate-500">
-                                {new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
-                            </span>
                         </div>
                     </div>
-                    <button onClick={onClose} className="p-2 rounded-xl hover:bg-slate-800/60 transition-colors">
-                        <X className="w-5 h-5 text-slate-400" />
+                    <button
+                        onClick={onClose}
+                        className="p-3 rounded-xl bg-slate-800 border-2 border-slate-700 hover:border-treetino-light transition-all shadow-neo-hover active:translate-y-0.5 active:shadow-none"
+                    >
+                        <X className="w-6 h-6 text-white" />
                     </button>
                 </div>
 
-                {/* Table */}
-                <div className="rounded-xl overflow-hidden border border-slate-700/30 mb-6">
-                    <table className="w-full text-sm">
-                        <tbody>
-                            {rows.map(([label, value], i) => (
-                                <tr key={label} className={i % 2 === 0 ? 'bg-slate-800/30' : 'bg-slate-800/10'}>
-                                    <td className="px-4 py-2.5 text-slate-400 font-medium">{label}</td>
-                                    <td className="px-4 py-2.5 text-white text-right font-mono text-xs">{value}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                {/* Summary Grid */}
+                <div className="grid grid-cols-4 gap-4">
+                    {summaryItems.map((item) => (
+                        <div key={item.label} className="p-4 rounded-xl border-2 border-slate-800 bg-slate-950 shadow-neo-hover">
+                            <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">{item.label}</p>
+                            <p className="text-sm font-black text-white uppercase">{item.value}</p>
+                        </div>
+                    ))}
                 </div>
 
-                {/* AR Preview */}
-                <div>
-                    <h3 className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-3">3D / AR Preview</h3>
-                    <div className="rounded-xl overflow-hidden border border-slate-700/30 bg-slate-800/30 h-64 relative">
-                        <model-viewer
-                            src="https://modelviewer.dev/shared-assets/models/Astronaut.glb"
-                            alt="Energy Tree 3D Preview"
-                            auto-rotate="true"
-                            camera-controls="true"
-                            shadow-intensity="1"
-                            exposure="0.8"
-                            loading="eager"
-                            style={{ width: '100%', height: '100%' }}
-                        />
-                        <div className="absolute bottom-3 left-3 px-3 py-1.5 rounded-lg bg-slate-900/80 backdrop-blur-sm border border-slate-700/40">
-                            <p className="text-[10px] text-slate-400">
-                                <WindIcon className="w-3 h-3 inline mr-1 text-emerald-400" />
-                                Interactive 3D — Drag to rotate
-                            </p>
+                <div className="grid grid-cols-5 gap-8">
+                    {/* Left: Detailed Breakdown */}
+                    <div className="col-span-3 space-y-6">
+                        <div className="space-y-3">
+                            <h3 className="text-xs font-black text-treetino-light uppercase tracking-[0.2em] flex items-center gap-2">
+                                <FileText className="w-3.5 h-3.5" /> Technical Specification
+                            </h3>
+                            <div className="rounded-xl border-2 border-slate-800 overflow-hidden">
+                                <table className="w-full text-xs">
+                                    <tbody>
+                                        {techRows.map(([label, value], i) => (
+                                            <tr key={label} className={i % 2 === 0 ? 'bg-slate-800/20' : 'bg-transparent'}>
+                                                <td className="px-4 py-3 text-slate-400 font-bold uppercase tracking-tighter">{label}</td>
+                                                <td className="px-4 py-3 text-white text-right font-black uppercase tracking-tight">{value}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div className="p-5 rounded-xl border-2 border-treetino-middle bg-treetino-middle/5 flex items-start gap-4">
+                            <div className="p-3 rounded-lg bg-treetino-light/10 border-2 border-treetino-light/20">
+                                <Shield className="w-5 h-5 text-treetino-light" />
+                            </div>
+                            <div className="space-y-1">
+                                <h4 className="text-xs font-black text-white uppercase tracking-wider">Performance Guarantee</h4>
+                                <p className="text-[10px] text-slate-500 leading-relaxed">
+                                    This quotation is based on high-fidelity environmental scan data. Energy trees include a 25-year structural warranty and AI-driven yield optimization as standard.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Right: Street View Map */}
+                    <div className="col-span-2 space-y-3 flex flex-col">
+                        <h3 className="text-xs font-black text-treetino-light uppercase tracking-[0.2em] flex items-center gap-2">
+                            <Globe className="w-3.5 h-3.5" /> Deployment Site
+                        </h3>
+                        <div className="flex-1 min-h-[300px] neo-panel overflow-hidden bg-slate-950 relative border-2 border-slate-800">
+                            <iframe
+                                title="Street View Map"
+                                width="100%"
+                                height="100%"
+                                style={{ border: 0 }}
+                                loading="lazy"
+                                allowFullScreen
+                                referrerPolicy="no-referrer-when-downgrade"
+                                src={`https://www.google.com/maps?q=${location.lat},${location.lon}&hl=en&z=18&output=embed`}
+                            ></iframe>
+                            <div className="absolute bottom-4 left-4 flex items-center gap-2 pointer-events-none">
+                                <span className="text-[8px] font-black text-slate-500 uppercase bg-slate-900/80 px-2 py-1 rounded border border-slate-700">Location Preview</span>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div className="mt-6 pt-4 border-t border-slate-700/30 flex items-center justify-between">
-                    <p className="text-[10px] text-slate-600">Valid for 30 days from generation.</p>
-                    <div className="flex items-center gap-2 text-[10px] text-slate-500">
-                        <TreePine className="w-3 h-3 text-emerald-500" />
-                        Treetino GmbH © {new Date().getFullYear()}
+                <div className="pt-6 border-t-2 border-slate-800 flex items-center justify-between">
+                    <div className="flex items-center gap-6">
+                        <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest">Treetino RWA Energy Platform</p>
+                        <div className="h-4 w-px bg-slate-800" />
+                        <p className="text-[9px] font-black text-treetino-light uppercase tracking-widest">Confidence Score: 0.98</p>
                     </div>
+                    <button className="neo-btn-primary !w-auto px-10 py-4 !rounded-full">
+                        Proceed to Deployment
+                    </button>
                 </div>
             </motion.div>
         </motion.div>

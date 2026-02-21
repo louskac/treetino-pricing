@@ -70,6 +70,7 @@ async def handle_calculate_roi(request: ROICalculationRequest):
             "latitude": request.lat,
             "longitude": request.lon,
             "hourly": "wind_speed_10m,wind_speed_100m,wind_direction_10m",
+            "past_days": 7,
             "forecast_days": 7,
             "wind_speed_unit": "ms"
         }
