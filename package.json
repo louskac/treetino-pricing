@@ -1,0 +1,9 @@
+{
+    "name": "treetino-app-monorepo",
+    "private": true,
+    "scripts": {
+        "dev:backend": "cd backend && ./venv/bin/uvicorn app.main:app --reload",
+        "dev:frontend": "cd frontend && pnpm run dev",
+        "build:frontend": "cd frontend && pnpm run build"
+    }
+}
