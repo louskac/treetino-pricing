@@ -3,7 +3,7 @@ import type { PVGISResult, WindResult, SolarCalcResult, WindCalcResult, SpotPote
 
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-const BACKEND_URL = 'http://localhost:8000';
+const BACKEND_URL = import.meta.env.PROD ? '/api' : 'http://localhost:8000';
 
 // ─── PVGIS Solar Calculation (via Proxy) ──────────────────
 export async function fetchSolarData(

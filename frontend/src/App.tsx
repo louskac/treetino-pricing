@@ -45,7 +45,7 @@ declare global {
   }
 }
 
-const BACKEND_URL = 'http://localhost:8000';
+const BACKEND_URL = import.meta.env.PROD ? '/api' : 'http://localhost:8000';
 
 const PRODUCT_DATA = [
   {
