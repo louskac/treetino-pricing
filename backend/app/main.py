@@ -1,5 +1,5 @@
 import asyncio
-from fastapi import FastAPI, Query, HTTPException
+from fastapi import FastAPI, APIRouter, Query, HTTPException
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 import httpx
@@ -21,11 +21,13 @@ class ROICalculationRequest(BaseModel):
     lon: float
     params: CalculatorParams
 
-@app.get("/")
+router = APIRouter()
+
+@router.get("/")
 def read_root():
     return {"status": "online"}
 
-@app.get("/pvgis")
+@router.get("/pvgis")
 async def proxy_pvgis(
     lat: float,
     lon: float,
@@ -49,7 +51,7 @@ async def proxy_pvgis(
         resp = await client.get(url, params=params)
         return resp.json()
 
-@app.post("/calculate-roi")
+@router.post("/calculate-roi")
 async def handle_calculate_roi(request: ROICalculationRequest):
     try:
         # 1. Fetch Solar Data from PVGIS
@@ -93,3 +95,7 @@ async def handle_calculate_roi(request: ROICalculationRequest):
             
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+# Mount the router both at the root (for localhost) and at /api (for Vercel)
+app.include_router(router)
+app.include_router(router, prefix="/api")
