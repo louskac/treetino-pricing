@@ -23,15 +23,15 @@ const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Se
 const PRODUCT_SPECS = {
     'main-tree': {
         leaves: 300,
-        leafPowerW: 43,           // Peak power per leaf
+        leafPowerW: 46,           // Peak power per leaf
         turbines: 12,
         turbinePowerKw: 3,        // Rated power per turbine
         height: 10,               // Standard installation height (meters)
         baseInvestment: 5000000,
     },
     'small-tree': {
-        leaves: 180,
-        leafPowerW: 30,           // Smaller leaves
+        leaves: 140,
+        leafPowerW: 46,           // Smaller leaves
         turbines: 6,
         turbinePowerKw: 1,        // Smaller turbines
         height: 5,                // Lower height
@@ -41,7 +41,7 @@ const PRODUCT_SPECS = {
         leaves: 0,
         leafPowerW: 0,
         turbines: 0,              // Calculated based on area
-        turbinePowerKw: 2,        // Rooftop models
+        turbinePowerKw: 3,        // Rooftop models
         height: 0,                // Uses building height
         baseInvestment: 100000,    // Per turbine cost
     }

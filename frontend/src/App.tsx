@@ -89,7 +89,8 @@ export default function App() {
   // ─── Auto-update Unit Count for Standalone ────────────
   useEffect(() => {
     if (product === 'standalone-turbine' && location?.roofArea) {
-      setUnitCount(Math.max(1, Math.floor(location.roofArea / 25)));
+      // New grid calculation (3m spacing -> 9m² per turbine)
+      setUnitCount(Math.max(1, Math.floor(location.roofArea / 9)));
     } else {
       setUnitCount(1);
     }

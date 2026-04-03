@@ -6,15 +6,15 @@ class ProductSpecs:
     SPECS = {
         'main-tree': {
             'leaves': 300,
-            'leafPowerW': 43,
+            'leafPowerW': 46,
             'turbines': 12,
             'turbinePowerKw': 3,
             'height': 10,
             'baseInvestment': 5000000,
         },
         'small-tree': {
-            'leaves': 180,
-            'leafPowerW': 30,
+            'leaves': 140,
+            'leafPowerW': 46,
             'turbines': 6,
             'turbinePowerKw': 1,
             'height': 5,
@@ -24,7 +24,7 @@ class ProductSpecs:
             'leaves': 0,
             'leafPowerW': 0,
             'turbines': 0,
-            'turbinePowerKw': 2,
+            'turbinePowerKw': 3,
             'height': 0,
             'baseInvestment': 100000,
         }
