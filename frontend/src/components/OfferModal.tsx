@@ -1,5 +1,6 @@
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { X, Zap, FileText, Calendar, Shield, Globe } from 'lucide-react';
+import { X, Zap, FileText, Calendar, Shield, Globe, Download, Loader2, User, MapPin } from 'lucide-react';
 import type { CalcResult, SelectedLocation } from '../types';
 
 interface Props {
@@ -55,6 +56,46 @@ export default function OfferModal({ result, location, energyCost, web3Enabled, 
         ['Web3 P2P Grid', web3Enabled ? 'ACTIVE' : 'INACTIVE'],
         ['ESG Certification', esgEnabled ? 'CERTIFIED' : 'NA'],
     ];
+
+    const [clientName, setClientName] = useState('ACME Corp');
+    const [clientAddress, setClientAddress] = useState('123 Energy Way, Tech City');
+    const [isGenerating, setIsGenerating] = useState(false);
+
+    const handleGeneratePdf = async () => {
+        setIsGenerating(true);
+        try {
+            const response = await fetch('/api/generate-pdf', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    clientName,
+                    clientAddress,
+                    result,
+                    location,
+                    energyCost,
+                    web3Enabled,
+                    esgEnabled
+                })
+            });
+
+            if (!response.ok) throw new Error('PDF generation failed');
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Treetino_Offer_${quoteId()}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error('Error generating PDF:', error);
+            alert('Failed to generate PDF. Check console for details.');
+        } finally {
+            setIsGenerating(false);
+        }
+    };
 
     return (
         <motion.div
@@ -160,14 +201,45 @@ export default function OfferModal({ result, location, energyCost, web3Enabled, 
                     </div>
                 </div>
 
+                {/* Client Info Playground Form */}
+                <div className="grid grid-cols-2 gap-4 border-2 border-slate-800 p-4 rounded-xl bg-slate-950">
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                            <User className="w-3 h-3 text-treetino-light" /> Client Name
+                        </label>
+                        <input
+                            type="text"
+                            value={clientName}
+                            onChange={(e) => setClientName(e.target.value)}
+                            className="w-full bg-slate-900 border border-slate-800 rounded px-3 py-2 text-white text-sm focus:border-treetino-light outline-none"
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                            <MapPin className="w-3 h-3 text-treetino-light" /> Client Address
+                        </label>
+                        <input
+                            type="text"
+                            value={clientAddress}
+                            onChange={(e) => setClientAddress(e.target.value)}
+                            className="w-full bg-slate-900 border border-slate-800 rounded px-3 py-2 text-white text-sm focus:border-treetino-light outline-none"
+                        />
+                    </div>
+                </div>
+
                 <div className="pt-6 border-t-2 border-slate-800 flex items-center justify-between">
                     <div className="flex items-center gap-6">
-                        <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest">Treetino RWA Energy Platform</p>
+                        <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest">Treetino B2B Sales Playground</p>
                         <div className="h-4 w-px bg-slate-800" />
                         <p className="text-[9px] font-black text-treetino-light uppercase tracking-widest">Confidence Score: 0.98</p>
                     </div>
-                    <button className="neo-btn-primary !w-auto px-10 py-4 !rounded-full">
-                        Proceed to Deployment
+                    <button
+                        onClick={handleGeneratePdf}
+                        disabled={isGenerating}
+                        className="neo-btn-primary !w-auto px-10 py-4 !rounded-full flex items-center gap-2"
+                    >
+                        {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                        {isGenerating ? 'Generating...' : 'Generate PDF Proposal'}
                     </button>
                 </div>
             </motion.div>
