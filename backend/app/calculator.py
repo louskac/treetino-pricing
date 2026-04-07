@@ -10,7 +10,7 @@ class ProductSpecs:
             'turbines': 12,
             'turbinePowerKw': 3,
             'height': 10,
-            'baseInvestment': 5000000,
+            'baseInvestment': 4900000,
         },
         'small-tree': {
             'leaves': 140,
@@ -45,6 +45,8 @@ class CalculatorParams(BaseModel):
     heliumHotspots: int
     roofArea: Optional[float] = 0
     buildingHeight: Optional[float] = 0
+    buildingConsumption: Optional[float] = 360 # MWh
+    discount: Optional[float] = 5.0 # Percentage
 
 def adjust_wind_speed(v_ref: float, h_ref: float, target_h: float) -> float:
     if target_h <= 0:
@@ -138,8 +140,25 @@ def calculate_roi(params: CalculatorParams, solar_data: Dict, wind_data: Dict) -
     combined_annual_revenue = total_annual_revenue + (total_future_revenue if params.showFutureRevenue else 0)
 
     # 6. ROI & Payback
-    roi = (combined_annual_revenue / investment_czk) * 100 if investment_czk > 0 else 0
-    payback_period = investment_czk / (combined_annual_revenue if combined_annual_revenue > 0 else 1)
+    total_before_discount = investment_czk
+    discount_amount = total_before_discount * (params.discount / 100.0)
+    final_price = total_before_discount - discount_amount
+    vat_percent = 21.0
+    final_price_vat = final_price * (1 + vat_percent / 100.0)
+    subsidy_price = final_price * 0.70
+
+    roi = (combined_annual_revenue / final_price) * 100 if final_price > 0 else 0
+    payback_period = final_price / (combined_annual_revenue if combined_annual_revenue > 0 else 1)
+    
+    dc_power_kw = (active_leaves * specs['leafPowerW'] / 1000.0) + (active_turbines * specs['turbinePowerKw'])
+    ac_power_kw = round(dc_power_kw * 0.9068, 2)
+    co2_savings = round((annual_solar_kwh + annual_wind_kwh) * 0.00025, 2)
+    trees_equivalent = round((annual_solar_kwh + annual_wind_kwh) * 0.0115)
+    
+    energy_from_solar = round((annual_solar_kwh / 1000.0) * 0.88, 2)
+    energy_to_building = round(((annual_solar_kwh + annual_wind_kwh) / 1000.0) * 0.88, 2)
+    energy_to_grid = round(((annual_solar_kwh + annual_wind_kwh) / 1000.0) - energy_to_building, 2)
+    energy_from_grid = round(params.buildingConsumption - energy_from_solar, 2)
 
     # 7. Monthly Distribution
     monthly_data = []
@@ -161,12 +180,28 @@ def calculate_roi(params: CalculatorParams, solar_data: Dict, wind_data: Dict) -
         "annualSolarRevenue": round(annual_solar_kwh * params.energyPrice * web3_bonus),
         "annualWindRevenue": round(annual_wind_kwh * params.energyPrice * web3_bonus),
         "totalAnnualRevenue": round(combined_annual_revenue),
-        "investment": investment_czk,
+        "investment": final_price,
         "paybackPeriod": round(payback_period, 1),
         "roi": round(roi, 1),
         "numberOfLeaves": active_leaves,
         "numberOfTurbines": active_turbines,
-        "lastWeekKwh": round(last_week_total_kwh, 1), # Added
+        "lastWeekKwh": round(last_week_total_kwh, 1),
+        "dcPowerKw": round(dc_power_kw, 2),
+        "acPowerKw": round(ac_power_kw, 2),
+        "co2Savings": co2_savings,
+        "treesEquivalent": trees_equivalent,
+        "discountPercent": params.discount,
+        "discountAmount": discount_amount,
+        "vatPercent": vat_percent,
+        "totalBeforeDiscount": total_before_discount,
+        "finalPrice": final_price,
+        "finalPriceVat": final_price_vat,
+        "subsidyPrice": subsidy_price,
+        "energyToBuilding": energy_to_building,
+        "energyToGrid": energy_to_grid,
+        "energyFromSolar": energy_from_solar,
+        "energyFromGrid": energy_from_grid,
+        "buildingConsumption": params.buildingConsumption,
         "futureEvRevenue": round(future_ev_revenue),
         "futureCarbonRevenue": round(future_carbon_revenue),
         "futureHeliumRevenue": round(future_helium_revenue),

@@ -69,6 +69,24 @@ export interface ROIResult {
     numberOfTurbines: number;
     lastWeekKwh: number; // Added
 
+    // Additions for perfect PDF match
+    dcPowerKw: number;
+    acPowerKw: number;
+    co2Savings: number;
+    treesEquivalent: number;
+    discountPercent: number;
+    discountAmount: number;
+    vatPercent: number;
+    totalBeforeDiscount: number;
+    finalPrice: number;
+    finalPriceVat: number;
+    subsidyPrice: number;
+    energyToBuilding: number;
+    energyToGrid: number;
+    energyFromSolar: number;
+    energyFromGrid: number;
+    buildingConsumption: number;
+
     // Future Revenue
     futureEvRevenue: number;
     futureCarbonRevenue: number;
@@ -97,4 +115,5 @@ export interface SelectedLocation {
     buildingId?: string;
     isBuilding: boolean;
     potential?: SpotPotential;
+    pins?: { lat: number; lng: number }[];
 }

@@ -52,21 +52,21 @@ const PRODUCT_DATA = [
     id: 'main-tree',
     name: 'Main Energy Tree',
     description: '300 Solar Leaves + Integrated Wind',
-    image: '/branding/products/main-tree.png',
+    image: '/products/strom1.png',
     investment: 5000000
   },
   {
     id: 'small-tree',
     name: 'Small Tree Prototype',
     description: '180 Solar Leaves — Pre-order',
-    image: '/branding/products/small-tree.png',
+    image: '/products/strom3.png',
     investment: 1500000
   },
   {
     id: 'standalone-turbine',
     name: 'Rooftop Turbines',
     description: 'Silent Transparent Wind Tech',
-    image: '/branding/products/standalone-turbine.png',
+    image: '/products/strom2.png',
     investment: 0 // Calculated based on roof area
   }
 ];
@@ -85,12 +85,16 @@ export default function App() {
   const [carsPerDay, setCarsPerDay] = useState(1);
   const [carbonCreditPercentage, setCarbonCreditPercentage] = useState(60);
   const [heliumHotspots, setHeliumHotspots] = useState(1);
+  const [buildingConsumption, setBuildingConsumption] = useState(360);
+  const [discount, setDiscount] = useState(5.0);
 
   // ─── Auto-update Unit Count for Standalone ────────────
   useEffect(() => {
     if (product === 'standalone-turbine' && location?.roofArea) {
       // New grid calculation (3m spacing -> 9m² per turbine)
       setUnitCount(Math.max(1, Math.floor(location.roofArea / 9)));
+    } else if (location?.pins && location.pins.length > 0) {
+      setUnitCount(location.pins.length);
     } else {
       setUnitCount(1);
     }
@@ -146,7 +150,9 @@ export default function App() {
         carbonCreditPercentage,
         heliumHotspots,
         roofArea: location.roofArea || 0,
-        buildingHeight: location.height || 0
+        buildingHeight: location.height || 0,
+        buildingConsumption,
+        discount
       };
 
       const { data } = await axios.post<CalcResult>(`${BACKEND_URL}/calculate-roi`, {
@@ -169,7 +175,14 @@ export default function App() {
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-slate-950 font-sans text-white">
       {/* 1. MAP */}
-      <MapCanvas onLocationSelect={handleLocationSelect} selectedLocation={location} />
+      <MapCanvas
+        onLocationSelect={handleLocationSelect}
+        selectedLocation={location}
+        onPinsChange={(pins) => {
+          setUnitCount(pins.length);
+          setLocation(prev => prev ? { ...prev, pins } : null);
+        }}
+      />
 
       {/* 2. TOP BAR & CONTROLS */}
       <div className="absolute top-0 left-0 right-0 z-30 flex items-start justify-between px-8 py-6 pointer-events-none">
@@ -284,14 +297,13 @@ export default function App() {
 
         {/* Sliders */}
         <div className="space-y-4">
-          <div className="space-y-2">
+          <div className="space-y-2 pb-2 border-b border-white/5">
             <div className="flex justify-between items-end">
-              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none">Units</label>
-              <span className="text-sm font-bold text-white leading-none">{unitCount} Units</span>
+              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none flex items-center gap-2">
+                <MapPin className="w-3 h-3 text-treetino-light" /> Map Extracted Units
+              </label>
+              <span className="text-sm font-bold text-white leading-none">{unitCount}x System</span>
             </div>
-            <input type="range" min={1} max={50} step={1} value={unitCount}
-              onChange={(e) => setUnitCount(parseInt(e.target.value))}
-              className="w-full h-1.5 bg-slate-800 rounded-full appearance-none cursor-pointer accent-treetino-light" />
           </div>
 
           <div className="space-y-2">
@@ -301,6 +313,26 @@ export default function App() {
             </div>
             <input type="range" min={1.00} max={15.00} step={0.1} value={energyCost}
               onChange={(e) => setEnergyCost(parseFloat(e.target.value))}
+              className="w-full h-1.5 bg-slate-800 rounded-full appearance-none cursor-pointer accent-treetino-light" />
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex justify-between items-end">
+              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none">Consumption</label>
+              <span className="text-sm font-bold text-white leading-none">{buildingConsumption} MWh</span>
+            </div>
+            <input type="range" min={10} max={5000} step={10} value={buildingConsumption}
+              onChange={(e) => setBuildingConsumption(parseInt(e.target.value))}
+              className="w-full h-1.5 bg-slate-800 rounded-full appearance-none cursor-pointer accent-treetino-light" />
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex justify-between items-end">
+              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none">Discount</label>
+              <span className="text-sm font-bold text-white leading-none">{discount.toFixed(1)}%</span>
+            </div>
+            <input type="range" min={0} max={30} step={0.5} value={discount}
+              onChange={(e) => setDiscount(parseFloat(e.target.value))}
               className="w-full h-1.5 bg-slate-800 rounded-full appearance-none cursor-pointer accent-treetino-light" />
           </div>
         </div>

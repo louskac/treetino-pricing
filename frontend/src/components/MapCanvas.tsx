@@ -10,7 +10,7 @@ import type { SelectedLocation } from '../types';
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN as string;
 const HAS_TOKEN = MAPBOX_TOKEN && MAPBOX_TOKEN !== 'your_mapbox_token_here';
 
-const INITIAL_VIEW = { longitude: 14.42, latitude: 50.08, zoom: 16, pitch: 45, bearing: -17 };
+const INITIAL_VIEW = { longitude: 15.5169, latitude: 49.4067, zoom: 17, pitch: 60, bearing: -17 };
 
 // Building layer paint for 3D extrusions
 const BUILDING_LAYER: mapboxgl.FillExtrusionLayer = {
@@ -44,6 +44,7 @@ const HIGHLIGHT_LAYER: mapboxgl.FillExtrusionLayer = {
 interface Props {
     selectedLocation: SelectedLocation | null;
     onLocationSelect: (loc: SelectedLocation) => void;
+    onPinsChange?: (pins: { lat: number; lng: number }[]) => void;
 }
 
 // Estimate area from GeoJSON polygon coordinates (Shoelace formula in meters approx)
@@ -63,9 +64,9 @@ function estimateAreaM2(coords: number[][]): number {
     return Math.abs(area / 2);
 }
 
-export default function MapCanvas({ onLocationSelect, selectedLocation }: Props) {
+export default function MapCanvas({ onLocationSelect, selectedLocation, onPinsChange }: Props) {
     const mapRef = useRef<MapRef>(null);
-    const [pin, setPin] = useState<{ lng: number; lat: number } | null>(null);
+    const [pins, setPins] = useState<{ lng: number; lat: number }[]>([]);
     const [highlightGeoJSON, setHighlightGeoJSON] = useState<FeatureCollection | null>(null);
 
     const handleClick = useCallback((e: MapMouseEvent) => {
@@ -73,7 +74,9 @@ export default function MapCanvas({ onLocationSelect, selectedLocation }: Props)
         if (!map) return;
 
         const { lng, lat } = e.lngLat;
-        setPin({ lng, lat });
+        const newPins = [...pins, { lng, lat }];
+        setPins(newPins);
+        onPinsChange?.(newPins);
 
         // Try to find a building at the click point
         const features = map.queryRenderedFeatures(e.point, { layers: ['3d-buildings'] });
@@ -103,15 +106,18 @@ export default function MapCanvas({ onLocationSelect, selectedLocation }: Props)
             setHighlightGeoJSON(null);
         }
 
-        onLocationSelect({
-            lat: Math.round(lat * 10000) / 10000,
-            lon: Math.round(lng * 10000) / 10000,
-            roofArea,
-            height,
-            buildingId,
-            isBuilding
-        });
-    }, [onLocationSelect]);
+        // Only query building data tightly on the first pin placement
+        if (newPins.length === 1) {
+            onLocationSelect({
+                lat: Math.round(lat * 10000) / 10000,
+                lon: Math.round(lng * 10000) / 10000,
+                roofArea,
+                height,
+                buildingId,
+                isBuilding
+            });
+        }
+    }, [onLocationSelect, pins, onPinsChange]);
 
     // Update highlight source whenever it changes
     useEffect(() => {
@@ -156,7 +162,7 @@ export default function MapCanvas({ onLocationSelect, selectedLocation }: Props)
     // ─── Fallback: no token ───────────────────────────────
     if (!HAS_TOKEN) {
         return (
-            <FallbackMap onLocationSelect={onLocationSelect} selectedLocation={selectedLocation} />
+            <FallbackMap onLocationSelect={onLocationSelect} selectedLocation={selectedLocation} onPinsChange={onPinsChange} />
         );
     }
 
@@ -216,9 +222,9 @@ export default function MapCanvas({ onLocationSelect, selectedLocation }: Props)
 
             {/* Pin overlay */}
             <AnimatePresence>
-                {pin && (
-                    <PinOverlay lat={pin.lat} lng={pin.lng} mapRef={mapRef} />
-                )}
+                {pins.map((p, idx) => (
+                    <PinOverlay key={`${p.lat}-${p.lng}-${idx}`} lat={p.lat} lng={p.lng} mapRef={mapRef} />
+                ))}
             </AnimatePresence>
         </div>
     );
@@ -261,21 +267,32 @@ function PinOverlay({ lat, lng, mapRef }: { lat: number; lng: number; mapRef: Re
 }
 
 // ─── Fallback grid when no Mapbox token ───────────────────
-function FallbackMap({ onLocationSelect, selectedLocation }: Props) {
+function FallbackMap({ onLocationSelect, selectedLocation, onPinsChange }: Props) {
     const ref = useRef<HTMLDivElement>(null);
+    const [clickCount, setClickCount] = useState(0);
 
     const handleClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
         if (!ref.current) return;
         const rect = ref.current.getBoundingClientRect();
         const px = (e.clientX - rect.left) / rect.width;
         const py = (e.clientY - rect.top) / rect.height;
-        onLocationSelect({
-            lat: Math.round((55 - py * 10) * 10000) / 10000,
-            lon: Math.round((5 + px * 20) * 10000) / 10000,
-            roofArea: null,
-            isBuilding: false
-        });
-    }, [onLocationSelect]);
+        
+        const newCount = clickCount + 1;
+        setClickCount(newCount);
+        
+        // For the fallback map we just emulate pins in a fixed array shape based on clicks
+        const fakePins = Array.from({ length: newCount }).map((_, i) => ({ lat: 55, lng: 5 }));
+        onPinsChange?.(fakePins);
+
+        if (newCount === 1) {
+            onLocationSelect({
+                lat: Math.round((55 - py * 10) * 10000) / 10000,
+                lon: Math.round((5 + px * 20) * 10000) / 10000,
+                roofArea: null,
+                isBuilding: false
+            });
+        }
+    }, [onLocationSelect, clickCount, onPinsChange]);
 
     return (
         <div ref={ref} onClick={handleClick} className="map-grid absolute inset-0 cursor-crosshair">

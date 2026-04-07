@@ -1,4 +1,5 @@
 import asyncio
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, APIRouter, Query, HTTPException
 from fastapi.responses import Response
 from pydantic import BaseModel
@@ -7,7 +8,14 @@ import httpx
 from .calculator import calculate_roi, CalculatorParams
 from .pdf_generator import generate_pdf
 
-app = FastAPI(title="Treetino Engine")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    try:
+        yield
+    except asyncio.CancelledError:
+        pass
+
+app = FastAPI(title="Treetino Engine", lifespan=lifespan)
 
 # Allow the React frontend to communicate with this backend
 app.add_middleware(

@@ -13,8 +13,8 @@ interface Props {
 export default function AnalyticsPanel({ result, energyCost, web3Enabled, esgEnabled }: Props) {
     const totalKwh = result.annualSolarKwh + result.annualWindKwh;
     const annualSavings = result.totalAnnualRevenue;
-    const co2Offset = Math.round(totalKwh * 0.0004 * 10) / 10;
-    const treesEquiv = Math.round(co2Offset * 50);
+    const co2Offset = result.co2Savings;
+    const treesEquiv = result.treesEquivalent;
     const evKm = Math.round(co2Offset * 8000).toLocaleString();
 
     // ROI

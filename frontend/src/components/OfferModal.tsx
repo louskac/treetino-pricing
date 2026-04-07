@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { X, Zap, FileText, Calendar, Shield, Globe, Download, Loader2, User, MapPin } from 'lucide-react';
 import type { CalcResult, SelectedLocation } from '../types';
+import Map, { Marker } from 'react-map-gl/mapbox';
+
+const TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
 
 interface Props {
     result: CalcResult;
@@ -41,9 +44,9 @@ export default function OfferModal({ result, location, energyCost, web3Enabled, 
     const roi = result.paybackPeriod;
 
     const summaryItems = [
-        { label: 'System Size', value: `${result.numberOfLeaves} Leaves / ${result.numberOfTurbines} Turbines`, icon: Zap },
+        { label: 'System Size', value: `${result.dcPowerKw ?? '-'} kWp / ${result.acPowerKw ?? '-'} kW AC`, icon: Zap },
         { label: 'Annual Output', value: `${Math.round(totalKwh).toLocaleString()} kWh`, icon: Zap },
-        { label: 'Investment', value: `${baseCost.toLocaleString()} CZK`, icon: FileText },
+        { label: 'Investment', value: `${(result.finalPrice ?? result.investment).toLocaleString()} CZK`, icon: FileText },
         { label: 'ROI Period', value: `${roi} Years`, icon: Calendar },
     ];
 
@@ -51,18 +54,37 @@ export default function OfferModal({ result, location, energyCost, web3Enabled, 
         ['Coordinates', `${location.lat.toFixed(4)}°N, ${location.lon.toFixed(4)}°E`],
         ...(location.roofArea ? [['Est. Roof Area', `${location.roofArea} m²`] as [string, string]] : []),
         ['Energy Price', `${energyCost.toFixed(2)} CZK/kWh`],
-        ['Secondary Revenue', `${result.totalFutureRevenue.toLocaleString()} CZK/yr`],
-        ['CO₂ Offset', `${co2.toFixed(1)} tons/year`],
+        ['Secondary Revenue', `${(result.totalFutureRevenue || 0).toLocaleString()} CZK/yr`],
+        ['CO₂ Offset', `${(result.co2Savings || co2).toFixed(2)} tons/year`],
+        ['Trees Equivalent', `${(result.treesEquivalent || Math.round(co2 * 50)).toLocaleString()}`],
         ['Web3 P2P Grid', web3Enabled ? 'ACTIVE' : 'INACTIVE'],
         ['ESG Certification', esgEnabled ? 'CERTIFIED' : 'NA'],
     ];
 
     const [clientName, setClientName] = useState('ACME Corp');
     const [clientAddress, setClientAddress] = useState('123 Energy Way, Tech City');
+    const [clientLogoBase64, setClientLogoBase64] = useState<string | null>(null);
+    const [consumptionValue, setConsumptionValue] = useState<number>(result.buildingConsumption);
+    const [consumptionUnit, setConsumptionUnit] = useState<'kWh' | 'MWh' | 'GWh'>('MWh');
     const [isGenerating, setIsGenerating] = useState(false);
+
+    const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setClientLogoBase64(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
 
     const handleGeneratePdf = async () => {
         setIsGenerating(true);
+        let finalOverride = consumptionValue;
+        if (consumptionUnit === 'kWh') finalOverride = consumptionValue / 1000.0;
+        if (consumptionUnit === 'GWh') finalOverride = consumptionValue * 1000.0;
+
         try {
             const response = await fetch('/api/generate-pdf', {
                 method: 'POST',
@@ -74,7 +96,9 @@ export default function OfferModal({ result, location, energyCost, web3Enabled, 
                     location,
                     energyCost,
                     web3Enabled,
-                    esgEnabled
+                    esgEnabled,
+                    clientLogoBase64,
+                    consumptionOverride: finalOverride
                 })
             });
 
@@ -184,25 +208,53 @@ export default function OfferModal({ result, location, energyCost, web3Enabled, 
                             <Globe className="w-3.5 h-3.5" /> Deployment Site
                         </h3>
                         <div className="flex-1 min-h-[300px] neo-panel overflow-hidden bg-slate-950 relative border-2 border-slate-800">
-                            <iframe
-                                title="Street View Map"
-                                width="100%"
-                                height="100%"
-                                style={{ border: 0 }}
-                                loading="lazy"
-                                allowFullScreen
-                                referrerPolicy="no-referrer-when-downgrade"
-                                src={`https://www.google.com/maps?q=${location.lat},${location.lon}&hl=en&z=18&output=embed`}
-                            ></iframe>
-                            <div className="absolute bottom-4 left-4 flex items-center gap-2 pointer-events-none">
-                                <span className="text-[8px] font-black text-slate-500 uppercase bg-slate-900/80 px-2 py-1 rounded border border-slate-700">Location Preview</span>
+                            {(() => {
+                                const activePins = location.pins && location.pins.length > 0
+                                    ? location.pins
+                                    : [{ lat: location.lat, lng: location.lon }];
+                                    
+                                let bounds: [number, number, number, number] | undefined = undefined;
+                                if (activePins.length > 1) {
+                                    const minLng = Math.min(...activePins.map(p => p.lng));
+                                    const maxLng = Math.max(...activePins.map(p => p.lng));
+                                    const minLat = Math.min(...activePins.map(p => p.lat));
+                                    const maxLat = Math.max(...activePins.map(p => p.lat));
+                                    
+                                    const lngPad = Math.max((maxLng - minLng) * 0.3, 0.0005);
+                                    const latPad = Math.max((maxLat - minLat) * 0.3, 0.0005);
+                                    bounds = [minLng - lngPad, minLat - latPad, maxLng + lngPad, maxLat + latPad];
+                                }
+                                
+                                return (
+                                    <Map
+                                        mapboxAccessToken={TOKEN}
+                                        initialViewState={{
+                                            longitude: activePins[0].lng,
+                                            latitude: activePins[0].lat,
+                                            zoom: 17.5,
+                                            bounds: bounds
+                                        }}
+                                        mapStyle="mapbox://styles/mapbox/satellite-v9"
+                                        interactive={true}
+                                        style={{ width: '100%', height: '100%' }}
+                                    >
+                                        {activePins.map((p, idx) => (
+                                            <Marker key={idx} longitude={p.lng} latitude={p.lat} anchor="center">
+                                                <img src="/top_view.png" alt="Tree Instance" className="w-[80px] h-[80px] object-contain drop-shadow-2xl" />
+                                            </Marker>
+                                        ))}
+                                    </Map>
+                                );
+                            })()}
+                            <div className="absolute bottom-4 left-4 flex items-center gap-2 pointer-events-none z-10">
+                                <span className="text-[8px] font-black text-slate-500 uppercase bg-slate-900/80 px-2 py-1 rounded border border-slate-700 backdrop-blur-md">Location Preview</span>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 {/* Client Info Playground Form */}
-                <div className="grid grid-cols-2 gap-4 border-2 border-slate-800 p-4 rounded-xl bg-slate-950">
+                <div className="grid grid-cols-4 gap-4 border-2 border-slate-800 p-4 rounded-xl bg-slate-950">
                     <div className="space-y-2">
                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
                             <User className="w-3 h-3 text-treetino-light" /> Client Name
@@ -224,6 +276,52 @@ export default function OfferModal({ result, location, energyCost, web3Enabled, 
                             onChange={(e) => setClientAddress(e.target.value)}
                             className="w-full bg-slate-900 border border-slate-800 rounded px-3 py-2 text-white text-sm focus:border-treetino-light outline-none"
                         />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                            <Zap className="w-3 h-3 text-treetino-light" /> Est Consumption
+                        </label>
+                        <div className="relative flex items-center bg-slate-900 border border-slate-800 rounded focus-within:border-treetino-light transition-colors">
+                            <input
+                                type="number"
+                                min={0}
+                                step="any"
+                                value={consumptionValue}
+                                onChange={(e) => setConsumptionValue(parseFloat(e.target.value) || 0)}
+                                className="w-full bg-transparent px-3 py-2 text-white text-sm outline-none"
+                            />
+                            <button 
+                                onClick={() => {
+                                    if (consumptionUnit === 'MWh') {
+                                        setConsumptionUnit('GWh');
+                                        setConsumptionValue(Number((consumptionValue / 1000).toFixed(2)));
+                                    } else if (consumptionUnit === 'GWh') {
+                                        setConsumptionUnit('kWh');
+                                        setConsumptionValue(Number((consumptionValue * 1000000).toFixed(2)));
+                                    } else {
+                                        setConsumptionUnit('MWh');
+                                        setConsumptionValue(Number((consumptionValue / 1000).toFixed(2)));
+                                    }
+                                }}
+                                className="h-full border-l border-slate-800 px-3 text-[10px] font-black text-treetino-light hover:bg-slate-800 hover:text-white transition-colors"
+                            >
+                                {consumptionUnit}
+                            </button>
+                        </div>
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                            <User className="w-3 h-3 text-treetino-light" /> Client Logo
+                        </label>
+                        <div className="relative">
+                            <input
+                                type="file"
+                                accept="image/*"
+                                onChange={handleLogoUpload}
+                                className="w-full bg-slate-900 border border-slate-800 rounded px-3 py-1 text-white text-sm focus:border-treetino-light outline-none file:mr-4 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-[10px] file:font-semibold file:bg-treetino-light/10 file:text-treetino-light hover:file:bg-treetino-light/20 cursor-pointer"
+                            />
+                            {clientLogoBase64 && <div className="absolute right-1 top-1/2 -translate-y-1/2 w-6 h-6 rounded bg-slate-800 overflow-hidden"><img src={clientLogoBase64} alt="Logo" className="w-full h-full object-cover" /></div>}
+                        </div>
                     </div>
                 </div>
 
