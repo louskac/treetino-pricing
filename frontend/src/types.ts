@@ -106,14 +106,16 @@ export interface SpotPotential {
     avgWindSpeed: number; // m/s
 }
 
-// ─── Map Pin ──────────────────────────────────────────────
+export interface PinLocation {
+    id: string;
+    lat: number;
+    lng: number;
+    type: ProductType;
+}
+
 export interface SelectedLocation {
     lat: number;
     lon: number;
-    roofArea: number | null;  // estimated m² from building footprint
-    height?: number;          // building height in meters
-    buildingId?: string;
-    isBuilding: boolean;
     potential?: SpotPotential;
-    pins?: { lat: number; lng: number }[];
+    pins: PinLocation[];
 }

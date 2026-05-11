@@ -211,3 +211,49 @@ model-viewer {
   height: 100%;
   --poster-color: transparent;
 }
+
+/* Hide Google Maps Alpha/Development Banner Overlay */
+.gm-err-container, 
+.gm-style-cc + div[style*="z-index: 1000001"],
+div[style*="background-color: white"][style*="z-index: 1000001"],
+.gm-banner {
+  display: none !important;
+}
+
+/* ─── Google Maps Autocomplete Dark Theme ──────────────── */
+.pac-container {
+  background-color: rgba(15, 23, 42, 0.95) !important;
+  backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(51, 65, 85, 0.5) !important;
+  border-radius: 0.75rem !important;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5), 0 0 10px rgba(88, 204, 168, 0.1) !important;
+  margin-top: 8px !important;
+  font-family: inherit !important;
+  z-index: 999999 !important;
+}
+
+.pac-item {
+  border-top: 1px solid rgba(51, 65, 85, 0.3) !important;
+  padding: 10px 16px !important;
+  color: #cbd5e1 !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+}
+
+.pac-item:hover, .pac-item-selected {
+  background-color: rgba(30, 41, 59, 0.8) !important;
+}
+
+.pac-item-query {
+  color: #f8fafc !important;
+  font-size: 14px !important;
+}
+
+.pac-matched {
+  color: #58cca8 !important;
+  font-weight: 600 !important;
+}
+
+.pac-icon {
+  filter: invert(0.8) sepia(1) saturate(3) hue-rotate(110deg) !important;
+}

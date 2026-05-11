@@ -31,8 +31,7 @@ class ProductSpecs:
     }
 
 class CalculatorParams(BaseModel):
-    productType: str
-    unitCount: int
+    productCounts: Dict[str, int]
     energyPrice: float
     sunnyDays: int
     windyDays: int
@@ -55,21 +54,25 @@ def adjust_wind_speed(v_ref: float, h_ref: float, target_h: float) -> float:
     return v_ref * math.pow(target_h / h_ref, alpha)
 
 def calculate_roi(params: CalculatorParams, solar_data: Dict, wind_data: Dict) -> Dict:
-    specs = ProductSpecs.SPECS.get(params.productType, ProductSpecs.SPECS['main-tree'])
-    
-    # 1. Determine System Magnitude
-    active_leaves = specs['leaves'] * params.unitCount
-    active_turbines = specs['turbines'] * params.unitCount
-    base_investment = specs['baseInvestment']
-    
-    if params.productType == 'standalone-turbine':
-        # For standalone turbines, user selects number of units directly
-        active_turbines = params.unitCount
-        investment_czk = active_turbines * base_investment
-    else:
-        investment_czk = params.unitCount * base_investment
+    active_leaves = 0
+    active_turbines = 0
+    investment_czk = 0
+    installation_height = params.buildingHeight or 0
+    total_units = max(1, sum(params.productCounts.values()))
 
-    installation_height = specs['height'] if specs['height'] > 0 else params.buildingHeight
+    for p_type, count in params.productCounts.items():
+        if count <= 0: continue
+        specs = ProductSpecs.SPECS.get(p_type, ProductSpecs.SPECS['main-tree'])
+        
+        active_leaves += specs['leaves'] * count
+        if p_type == 'standalone-turbine':
+            active_turbines += count
+        else:
+            active_turbines += specs['turbines'] * count
+            
+        investment_czk += specs['baseInvestment'] * count
+        if specs['height'] > installation_height:
+            installation_height = specs['height']
 
     # 2. Solar Calculation
     solar_yield_factor = solar_data['outputs']['totals']['fixed']['E_y']
@@ -123,18 +126,18 @@ def calculate_roi(params: CalculatorParams, solar_data: Dict, wind_data: Dict) -
     ev_charging_days_per_year = 250
     ev_charging_operating_costs = 50000 
     gross_ev_revenue = ev_charging_kwh_per_day * ev_charging_price * ev_charging_days_per_year
-    future_ev_revenue = max(0, gross_ev_revenue - ev_charging_operating_costs) * params.unitCount
+    future_ev_revenue = max(0, gross_ev_revenue - ev_charging_operating_costs) * total_units
 
     max_carbon_tons = 15
     actual_carbon_tons = (max_carbon_tons * params.carbonCreditPercentage) / 100.0
     carbon_price = 1800 
     carbon_verification_costs = 350000 
     gross_carbon_revenue = actual_carbon_tons * carbon_price
-    future_carbon_revenue = max(0, gross_carbon_revenue - carbon_verification_costs) * params.unitCount
+    future_carbon_revenue = max(0, gross_carbon_revenue - carbon_verification_costs) * total_units
 
     helium_monthly = 1800 
     helium_costs = 500 
-    future_helium_revenue = params.heliumHotspots * (helium_monthly - helium_costs) * 12 * params.unitCount
+    future_helium_revenue = params.heliumHotspots * (helium_monthly - helium_costs) * 12 * total_units
 
     total_future_revenue = future_ev_revenue + future_carbon_revenue + future_helium_revenue
     combined_annual_revenue = total_annual_revenue + (total_future_revenue if params.showFutureRevenue else 0)
@@ -168,7 +171,7 @@ def calculate_roi(params: CalculatorParams, solar_data: Dict, wind_data: Dict) -
         wind_ratio = 1 / 12.0
         
         monthly_data.append({
-            "month": ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][i],
+            "month": ['Led', 'Úno', 'Bře', 'Dub', 'Kvě', 'Čer', 'Čvc', 'Srp', 'Zář', 'Říj', 'Lis', 'Pro'][i],
             "solar": round(annual_solar_kwh * solar_ratio),
             "wind": round(annual_wind_kwh * wind_ratio),
             "total": round(annual_solar_kwh * solar_ratio + annual_wind_kwh * wind_ratio)

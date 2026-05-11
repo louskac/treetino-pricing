@@ -11,8 +11,7 @@
     "module": "ESNext",
     "types": [
       "vite/client",
-      "geojson",
-      "mapbox-gl"
+      "google.maps"
     ],
     "skipLibCheck": true,
     /* Bundler mode */

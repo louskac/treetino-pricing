@@ -1,8 +1,7 @@
 import type { ProductType, ROIResult, PVGISResult, WindResult } from './types';
 
 export interface CalculatorParams {
-    productType: ProductType;
-    unitCount: number;
+    productCounts: Record<string, number>;
     energyPrice: number;
     sunnyDays: number;
     windyDays: number;
@@ -19,7 +18,7 @@ export interface CalculatorParams {
     discount?: number;
 }
 
-const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const MONTH_NAMES = ['Led', 'Úno', 'Bře', 'Dub', 'Kvě', 'Čer', 'Čvc', 'Srp', 'Zář', 'Říj', 'Lis', 'Pro'];
 
 // ─── Product Specifications ──────────────────────────────
 const PRODUCT_SPECS = {
@@ -65,8 +64,7 @@ export function calculateROI(
     windData: WindResult
 ): ROIResult {
     const {
-        productType,
-        unitCount,
+        productCounts,
         energyPrice,
         sunnyDays,
         windyDays,
@@ -83,23 +81,46 @@ export function calculateROI(
         discount = 5.0
     } = params;
 
-    const specs = PRODUCT_SPECS[productType];
+    let activeLeaves = 0;
+    let activeTurbines = 0;
+    let investmentCZK = 0;
+    let installationHeight = buildingHeight || 0;
+    
+    let totalUnits = 0;
+    let totalCapKwp = 0;
+    let totalRatedWindKw = 0;
+    let dcPowerKw = 0;
 
-    // 1. Determine System Magnitude
-    let activeLeaves = specs.leaves * unitCount;
-    let activeTurbines = specs.turbines * unitCount;
-    let investmentCZK = unitCount * specs.baseInvestment;
-
-    if (productType === 'standalone-turbine') {
-        activeTurbines = unitCount;
+    for (const pType in productCounts) {
+        const count = productCounts[pType];
+        if (count <= 0) continue;
+        totalUnits += count;
+        
+        const specs = PRODUCT_SPECS[pType as ProductType] || PRODUCT_SPECS['main-tree'];
+        
+        activeLeaves += specs.leaves * count;
+        if (pType === 'standalone-turbine') {
+            activeTurbines += count;
+            totalRatedWindKw += count * specs.turbinePowerKw;
+            dcPowerKw += (count * specs.turbinePowerKw);
+        } else {
+            activeTurbines += specs.turbines * count;
+            totalRatedWindKw += specs.turbines * count * specs.turbinePowerKw;
+            dcPowerKw += (specs.leaves * count * specs.leafPowerW / 1000.0) + (specs.turbines * count * specs.turbinePowerKw);
+        }
+        
+        totalCapKwp += (specs.leaves * count * specs.leafPowerW) / 1000;
+        investmentCZK += specs.baseInvestment * count;
+        if (specs.height && specs.height > installationHeight) {
+            installationHeight = specs.height;
+        }
     }
-
-    const installationHeight = specs.height || buildingHeight || 0;
+    
+    totalUnits = Math.max(1, totalUnits);
 
     // 2. Solar Calculation Grounded in PVGIS
     // E_y is annual kWh per 1kWp system.
     const solarYieldFactor = solarData.outputs.totals.fixed.E_y;
-    const totalCapKwp = (activeLeaves * specs.leafPowerW) / 1000;
 
     // Baseline is 100% capacity at location's E_y. 
     // Slider (sunnyDays) scales this baseline relative to 200 days.
@@ -123,7 +144,7 @@ export function calculateROI(
 
     // Annual Windy Hours = windyDays * windHours
     const totalOpHours = windyDays * windHours;
-    const annualWindKwh = activeTurbines * specs.turbinePowerKw * totalOpHours;
+    const annualWindKwh = totalRatedWindKw * totalOpHours * speedFactor;
     const annualWindRevenue = annualWindKwh * energyPrice;
 
     // 4. Combined Revenue & Savings
@@ -137,13 +158,13 @@ export function calculateROI(
     // 5. Future Revenue Streams (Scaled)
     const evChargingKwhPerDay = carsPerDay * 25;
     const grossEvChargingRevenue = evChargingKwhPerDay * 10 * 250;
-    const futureEvChargingRevenue = Math.max(0, grossEvChargingRevenue - 50000) * unitCount;
+    const futureEvChargingRevenue = Math.max(0, grossEvChargingRevenue - 50000) * totalUnits;
 
     const actualCarbonTonsSold = (15 * carbonCreditPercentage) / 100;
     const grossCarbonRevenue = actualCarbonTonsSold * 1800;
-    const futureCarbonCreditsRevenue = Math.max(0, grossCarbonRevenue - 350000) * unitCount;
+    const futureCarbonCreditsRevenue = Math.max(0, grossCarbonRevenue - 350000) * totalUnits;
 
-    const futureHeliumRevenue = heliumHotspots * (1800 - 500) * 12 * unitCount;
+    const futureHeliumRevenue = heliumHotspots * (1800 - 500) * 12 * totalUnits;
 
     const totalFutureRevenue = futureEvChargingRevenue + futureCarbonCreditsRevenue + futureHeliumRevenue;
     const combinedAnnualRevenue = totalAnnualRevenue + (showFutureRevenue ? totalFutureRevenue : 0);
@@ -160,7 +181,6 @@ export function calculateROI(
     const paybackPeriod = finalPrice / (combinedAnnualRevenue || 1);
 
     // Derived metrics for UI matching the actual PDF
-    const dcPowerKw = (activeLeaves * specs.leafPowerW / 1000.0) + (activeTurbines * specs.turbinePowerKw);
     const acPowerKw = Math.round((dcPowerKw * 0.9068) * 100) / 100; // rough inverter efficiency to match 133.31
     const co2Savings = Math.round((annualSolarKwh + annualWindKwh) * 0.00025 * 100) / 100; // matches 73.78 roughly
     const treesEquivalent = Math.round((annualSolarKwh + annualWindKwh) * 0.0115); // matches 3388
@@ -178,7 +198,7 @@ export function calculateROI(
         const windRatio = 1 / 12; // Simplified flat wind distribution for chart
 
         return {
-            month: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][i],
+            month: ['Led', 'Úno', 'Bře', 'Dub', 'Kvě', 'Čer', 'Čvc', 'Srp', 'Zář', 'Říj', 'Lis', 'Pro'][i],
             solar: Math.round(annualSolarKwh * solarRatio),
             wind: Math.round(annualWindKwh * windRatio),
             total: Math.round(annualSolarKwh * solarRatio + annualWindKwh * windRatio)

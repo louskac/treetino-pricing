@@ -50,22 +50,22 @@ const BACKEND_URL = import.meta.env.PROD ? '/api' : 'http://localhost:8000';
 const PRODUCT_DATA = [
   {
     id: 'main-tree',
-    name: 'Main Energy Tree',
-    description: '300 Solar Leaves + Integrated Wind',
+    name: 'Hlavní Energetický Strom',
+    description: '300 solárních listů + integrovaný vítr',
     image: '/products/strom1.png',
     investment: 5000000
   },
   {
     id: 'small-tree',
-    name: 'Small Tree Prototype',
-    description: '180 Solar Leaves — Pre-order',
+    name: 'Malý Strom Prototyp',
+    description: '180 solárních listů — Předobjednávka',
     image: '/products/strom3.png',
     investment: 1500000
   },
   {
     id: 'standalone-turbine',
-    name: 'Rooftop Turbines',
-    description: 'Silent Transparent Wind Tech',
+    name: 'Střešní Turbíny',
+    description: 'Tichá transparentní větrná technologie',
     image: '/products/strom2.png',
     investment: 0 // Calculated based on roof area
   }
@@ -88,17 +88,14 @@ export default function App() {
   const [buildingConsumption, setBuildingConsumption] = useState(360);
   const [discount, setDiscount] = useState(5.0);
 
-  // ─── Auto-update Unit Count for Standalone ────────────
+  // ─── Auto-update Unit Count ────────────
   useEffect(() => {
-    if (product === 'standalone-turbine' && location?.roofArea) {
-      // New grid calculation (3m spacing -> 9m² per turbine)
-      setUnitCount(Math.max(1, Math.floor(location.roofArea / 9)));
-    } else if (location?.pins && location.pins.length > 0) {
+    if (location?.pins && location.pins.length > 0) {
       setUnitCount(location.pins.length);
     } else {
-      setUnitCount(1);
+      setUnitCount(0);
     }
-  }, [product, location]);
+  }, [location]);
 
   const [web3Enabled, setWeb3Enabled] = useState(false);
   const [esgEnabled, setEsgEnabled] = useState(true);
@@ -136,9 +133,18 @@ export default function App() {
     setLoading(true);
     setError(null);
     try {
+      const productCounts = location.pins.reduce((acc, pin) => {
+          acc[pin.type] = (acc[pin.type] || 0) + 1;
+          return acc;
+      }, {} as Record<string, number>);
+
+      // Add default 1 if empty pins to at least compute the selected product
+      if (Object.keys(productCounts).length === 0) {
+          productCounts[product] = 1;
+      }
+
       const calcParams = {
-        productType: product,
-        unitCount,
+        productCounts,
         energyPrice: energyCost,
         sunnyDays,
         windyDays,
@@ -149,8 +155,7 @@ export default function App() {
         carsPerDay,
         carbonCreditPercentage,
         heliumHotspots,
-        roofArea: location.roofArea || 0,
-        buildingHeight: location.height || 0,
+        buildingHeight: 0,
         buildingConsumption,
         discount
       };
@@ -164,7 +169,7 @@ export default function App() {
       setResult(data);
     } catch (e) {
       console.error(e);
-      setError('Calculation failed. Please check your connection and location.');
+      setError('Výpočet selhal. Zkontrolujte prosím své připojení a polohu.');
     } finally {
       setLoading(false);
     }
@@ -182,6 +187,7 @@ export default function App() {
           setUnitCount(pins.length);
           setLocation(prev => prev ? { ...prev, pins } : null);
         }}
+        product={product}
       />
 
       {/* 2. TOP BAR & CONTROLS */}
@@ -193,7 +199,7 @@ export default function App() {
           <div className="h-8 w-px bg-white/10" />
           <div className="flex flex-col">
             <RotatingText
-              texts={['Energy Trees', 'ROI Calculator', 'Future Power']}
+              texts={['Energetické Stromy', 'ROI Kalkulačka', 'Budoucnost Energie']}
               mainClassName="text-[10px] font-black uppercase tracking-[0.2em] text-treetino-light"
               rotationInterval={3000}
             />
@@ -213,7 +219,7 @@ export default function App() {
               className="neo-btn-secondary pointer-events-auto py-4 px-6 shadow-hyper-glow flex items-center gap-3 border-treetino-light/30 bg-slate-900/80"
             >
               <FileText className="w-5 h-5 text-treetino-light" />
-              <span className="text-xs font-black">EXPORT PDF PROPOSAL</span>
+              <span className="text-xs font-black">EXPORTOVAT PDF NABÍDKU</span>
             </motion.button>
           )}
         </AnimatePresence>
@@ -227,21 +233,20 @@ export default function App() {
         className="absolute top-24 right-8 bottom-8 w-96 z-40 neo-panel p-6 flex flex-col gap-6 overflow-y-auto"
       >
         <div className="space-y-1 bg-slate-950 -mx-6 -mt-6 p-6 rounded-t-xl border-b border-slate-800">
-          <h2 className="text-xl font-black text-white uppercase tracking-tighter">Configuration</h2>
+          <h2 className="text-xl font-black text-white uppercase tracking-tighter">Konfigurace</h2>
           <div className="h-1 w-12 bg-treetino-light shadow-[0_0_12px_rgba(39,98,173,0.5)]" />
         </div>
 
         {/* Product Selection Horizontal Grid */}
         <div className="space-y-4">
           <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] flex items-center gap-2">
-            <Zap className="w-3 h-3 text-treetino-light" /> 01 UNIT SELECTION
+            <Zap className="w-3 h-3 text-treetino-light" /> 01 VÝBĚR JEDNOTKY
           </label>
           <div className="grid grid-cols-3 gap-2">
             {PRODUCT_DATA.map((pd) => (
               <motion.button
                 key={pd.id}
-                whileHover={pd.id === 'standalone-turbine' && !location?.isBuilding ? {} : { y: -4 }}
-                disabled={pd.id === 'standalone-turbine' && !location?.isBuilding}
+                whileHover={{ y: -4 }}
                 onClick={() => {
                   setProduct(pd.id as ProductType);
                   setResult(null);
@@ -249,7 +254,7 @@ export default function App() {
                 className={`relative group overflow-hidden h-28 text-left transition-all rounded-2xl border-2 ${product === pd.id
                   ? 'border-treetino-light shadow-hyper-glow bg-slate-800'
                   : 'border-white/5 bg-slate-900/50 hover:border-white/20'
-                  } ${pd.id === 'standalone-turbine' && !location?.isBuilding ? 'opacity-20 grayscale cursor-not-allowed' : ''}`}
+                  }`}
               >
                 <div className="absolute inset-0 z-0">
                   <img src={pd.image} alt={pd.name} className="w-full h-full object-cover opacity-40 group-hover:opacity-60 transition-opacity" />
@@ -271,27 +276,21 @@ export default function App() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <MapPin className="w-4 h-4 text-treetino-light" />
-                <span className="text-[10px] font-black text-white uppercase tracking-widest">Site Analysis</span>
+                <span className="text-[10px] font-black text-white uppercase tracking-widest">Analýza Lokality</span>
               </div>
               <span className="text-[10px] font-mono font-bold text-treetino-light/80">{location.lat.toFixed(4)}, {location.lon.toFixed(4)}</span>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
-                <span className="text-[9px] text-slate-500 font-bold uppercase">Solar Yield</span>
+                <span className="text-[9px] text-slate-500 font-bold uppercase">Solární potenciál</span>
                 <div className="text-lg font-black text-white">{location.potential ? `${location.potential.solarIndex}%` : '--'}</div>
               </div>
               <div className="space-y-1">
-                <span className="text-[9px] text-slate-500 font-bold uppercase">Wind Spd</span>
+                <span className="text-[9px] text-slate-500 font-bold uppercase">Rychlost větru</span>
                 <div className="text-lg font-black text-white">{location.potential ? `${location.potential.avgWindSpeed}m/s` : '--'}</div>
               </div>
             </div>
-            {location.isBuilding && (
-              <div className="pt-2 border-t border-treetino-middle/20 flex items-center gap-2">
-                <Ruler className="w-3 h-3 text-treetino-light" />
-                <span className="text-[10px] font-bold text-slate-300">ROOF AREA: {location.roofArea}m²</span>
-              </div>
-            )}
           </div>
         )}
 
@@ -300,15 +299,15 @@ export default function App() {
           <div className="space-y-2 pb-2 border-b border-white/5">
             <div className="flex justify-between items-end">
               <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none flex items-center gap-2">
-                <MapPin className="w-3 h-3 text-treetino-light" /> Map Extracted Units
+                <MapPin className="w-3 h-3 text-treetino-light" /> Extrahované jednotky z mapy
               </label>
-              <span className="text-sm font-bold text-white leading-none">{unitCount}x System</span>
+              <span className="text-sm font-bold text-white leading-none">{unitCount}x Systém</span>
             </div>
           </div>
 
           <div className="space-y-2">
             <div className="flex justify-between items-end">
-              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none">Net Cost / kWh</label>
+              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none">Cena za kWh</label>
               <span className="text-sm font-bold text-white leading-none">{energyCost.toFixed(2)} CZK</span>
             </div>
             <input type="range" min={1.00} max={15.00} step={0.1} value={energyCost}
@@ -318,7 +317,7 @@ export default function App() {
 
           <div className="space-y-2">
             <div className="flex justify-between items-end">
-              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none">Consumption</label>
+              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none">Spotřeba</label>
               <span className="text-sm font-bold text-white leading-none">{buildingConsumption} MWh</span>
             </div>
             <input type="range" min={10} max={5000} step={10} value={buildingConsumption}
@@ -328,7 +327,7 @@ export default function App() {
 
           <div className="space-y-2">
             <div className="flex justify-between items-end">
-              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none">Discount</label>
+              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none">Sleva</label>
               <span className="text-sm font-bold text-white leading-none">{discount.toFixed(1)}%</span>
             </div>
             <input type="range" min={0} max={30} step={0.5} value={discount}
@@ -366,11 +365,11 @@ export default function App() {
               animate={{ height: 'auto', opacity: 1 }}
               className="px-4 py-3 rounded-xl bg-treetino-light border-2 border-treetino-middle mb-2 overflow-hidden"
             >
-              <span className="text-[9px] font-black text-treetino-accent uppercase tracking-[0.2em] mb-1 block">Projected Annual Savings</span>
+              <span className="text-[9px] font-black text-treetino-accent uppercase tracking-[0.2em] mb-1 block">Předpokládané roční úspory</span>
               <div className="flex items-baseline gap-2">
                 <BlurText text={`${annualSavings.toLocaleString()}`} className="text-2xl font-black text-white !justify-start !text-left" animateBy="characters" />
                 <span className="text-2xl font-black text-white">CZK</span>
-                <span className="text-xs font-bold text-treetino-accent">NET</span>
+                <span className="text-xs font-bold text-treetino-accent">ČISTÉHO</span>
               </div>
             </motion.div>
           )}
@@ -383,9 +382,9 @@ export default function App() {
           className="neo-btn-primary flex items-center justify-center gap-2 group"
         >
           {loading ? (
-            <><Loader2 className="w-4 h-4 animate-spin" />ANALYZING...</>
+            <><Loader2 className="w-4 h-4 animate-spin" />ANALYZUJI...</>
           ) : (
-            <><TrendingUp className="w-4 h-4 group-hover:translate-y-[-2px] transition-transform" />CALCULATE ROI</>
+            <><TrendingUp className="w-4 h-4 group-hover:translate-y-[-2px] transition-transform" />SPOČÍTAT NÁVRATNOST</>
           )}
         </button>
       </motion.aside>

@@ -1,7 +1,7 @@
 import axios from 'axios';
 import type { PVGISResult, WindResult, SolarCalcResult, WindCalcResult, SpotPotential } from './types';
 
-const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const MONTH_NAMES = ['Led', 'Úno', 'Bře', 'Dub', 'Kvě', 'Čer', 'Čvc', 'Srp', 'Zář', 'Říj', 'Lis', 'Pro'];
 
 const BACKEND_URL = import.meta.env.PROD ? '/api' : 'http://localhost:8000';
 

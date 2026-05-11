@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { X, Zap, FileText, Calendar, Shield, Globe, Download, Loader2, User, MapPin } from 'lucide-react';
 import type { CalcResult, SelectedLocation } from '../types';
-import Map, { Marker } from 'react-map-gl/mapbox';
+import { APIProvider, Map, AdvancedMarker } from '@vis.gl/react-google-maps';
 
-const TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
+const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string || '';
+const GOOGLE_MAP_ID = import.meta.env.VITE_GOOGLE_MAP_ID as string || 'DEMO_MAP_ID';
 
 interface Props {
     result: CalcResult;
@@ -44,29 +45,75 @@ export default function OfferModal({ result, location, energyCost, web3Enabled, 
     const roi = result.paybackPeriod;
 
     const summaryItems = [
-        { label: 'System Size', value: `${result.dcPowerKw ?? '-'} kWp / ${result.acPowerKw ?? '-'} kW AC`, icon: Zap },
-        { label: 'Annual Output', value: `${Math.round(totalKwh).toLocaleString()} kWh`, icon: Zap },
-        { label: 'Investment', value: `${(result.finalPrice ?? result.investment).toLocaleString()} CZK`, icon: FileText },
-        { label: 'ROI Period', value: `${roi} Years`, icon: Calendar },
+        { label: 'Velikost Systému', value: `${result.dcPowerKw ?? '-'} kWp / ${result.acPowerKw ?? '-'} kW AC`, icon: Zap },
+        { label: 'Roční Výroba', value: `${Math.round(totalKwh).toLocaleString()} kWh`, icon: Zap },
+        { label: 'Investice', value: `${(result.finalPrice ?? result.investment).toLocaleString()} CZK`, icon: FileText },
+        { label: 'Návratnost', value: `${roi} Roků`, icon: Calendar },
     ];
 
     const techRows: [string, string][] = [
-        ['Coordinates', `${location.lat.toFixed(4)}°N, ${location.lon.toFixed(4)}°E`],
-        ...(location.roofArea ? [['Est. Roof Area', `${location.roofArea} m²`] as [string, string]] : []),
-        ['Energy Price', `${energyCost.toFixed(2)} CZK/kWh`],
-        ['Secondary Revenue', `${(result.totalFutureRevenue || 0).toLocaleString()} CZK/yr`],
-        ['CO₂ Offset', `${(result.co2Savings || co2).toFixed(2)} tons/year`],
-        ['Trees Equivalent', `${(result.treesEquivalent || Math.round(co2 * 50)).toLocaleString()}`],
-        ['Web3 P2P Grid', web3Enabled ? 'ACTIVE' : 'INACTIVE'],
-        ['ESG Certification', esgEnabled ? 'CERTIFIED' : 'NA'],
+        ['Souřadnice', `${location.lat.toFixed(4)}°N, ${location.lon.toFixed(4)}°E`],
+        ['Cena Energie', `${energyCost.toFixed(2)} CZK/kWh`],
+        ['Vedlejší Příjmy', `${(result.totalFutureRevenue || 0).toLocaleString()} CZK/rok`],
+        ['Úspora CO₂', `${(result.co2Savings || co2).toFixed(2)} tun/rok`],
+        ['Ekvivalent Stromů', `${(result.treesEquivalent || Math.round(co2 * 50)).toLocaleString()}`],
+        ['Web3 P2P Síť', web3Enabled ? 'AKTIVNÍ' : 'NEAKTIVNÍ'],
+        ['ESG Certifikace', esgEnabled ? 'CERTIFIKOVÁNO' : 'N/A'],
     ];
 
-    const [clientName, setClientName] = useState('ACME Corp');
-    const [clientAddress, setClientAddress] = useState('123 Energy Way, Tech City');
+    const [clientName, setClientName] = useState('ACME s.r.o.');
+    const [clientAddress, setClientAddress] = useState('Energetická 123, Technologické Město');
     const [clientLogoBase64, setClientLogoBase64] = useState<string | null>(null);
     const [consumptionValue, setConsumptionValue] = useState<number>(result.buildingConsumption);
     const [consumptionUnit, setConsumptionUnit] = useState<'kWh' | 'MWh' | 'GWh'>('MWh');
     const [isGenerating, setIsGenerating] = useState(false);
+    const [ico, setIco] = useState('');
+    const [isFetchingIco, setIsFetchingIco] = useState(false);
+
+    const handleIcoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const newVal = e.target.value.replace(/\D/g, '');
+        setIco(newVal);
+        
+        // Clear old results if they start modifying a full IČO
+        if (newVal.length > 0 && newVal.length < 8) {
+            setClientName('');
+            setClientAddress('');
+        }
+        
+        // Exact 8-digit IČO search
+        if (newVal.length === 8) {
+            setIsFetchingIco(true);
+            try {
+                const response = await fetch(`https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/${newVal}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.obchodniJmeno) setClientName(data.obchodniJmeno);
+                    
+                    let bestAddress = data.sidlo?.textovaAdresa;
+                    if (data.dalsiUdaje && Array.isArray(data.dalsiUdaje)) {
+                        const resData = data.dalsiUdaje.find((d: any) => d.datovyZdroj === 'res');
+                        const rzpData = data.dalsiUdaje.find((d: any) => d.datovyZdroj === 'rzp');
+                        
+                        if (resData?.sidlo?.[0]?.sidlo?.textovaAdresa) {
+                            bestAddress = resData.sidlo[0].sidlo.textovaAdresa;
+                        } else if (rzpData?.sidlo?.[0]?.sidlo?.textovaAdresa) {
+                            bestAddress = rzpData.sidlo[0].sidlo.textovaAdresa;
+                        }
+                    }
+                    if (bestAddress) setClientAddress(bestAddress);
+                } else {
+                    setClientName('IČO nenalezeno v ARES');
+                    setClientAddress('Zkontrolujte správnost IČO');
+                }
+            } catch (error) {
+                console.error('ARES fetch failed:', error);
+                setClientName('Chyba připojení k ARES');
+                setClientAddress('Zkuste to prosím znovu');
+            } finally {
+                setIsFetchingIco(false);
+            }
+        }
+    };
 
     const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -115,7 +162,7 @@ export default function OfferModal({ result, location, energyCost, web3Enabled, 
             window.URL.revokeObjectURL(url);
         } catch (error) {
             console.error('Error generating PDF:', error);
-            alert('Failed to generate PDF. Check console for details.');
+            alert('Generování PDF selhalo. Zkontrolujte konzoli pro detaily.');
         } finally {
             setIsGenerating(false);
         }
@@ -142,11 +189,11 @@ export default function OfferModal({ result, location, energyCost, web3Enabled, 
                     <div className="space-y-4">
                         <img src="/branding/logo_horizontal.png" alt="Treetino Logo" className="h-10 w-auto filter brightness-0 invert" />
                         <div className="space-y-1">
-                            <h2 className="text-2xl font-black text-white uppercase tracking-tight">Investment Quotation</h2>
+                            <h2 className="text-2xl font-black text-white uppercase tracking-tight">Investiční Nabídka</h2>
                             <div className="flex items-center gap-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">
                                 <span className="text-treetino-light">Ref: {quoteId()}</span>
                                 <span>•</span>
-                                <span>{new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                                <span>{new Date().toLocaleDateString('cs-CZ', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
                             </div>
                         </div>
                     </div>
@@ -173,7 +220,7 @@ export default function OfferModal({ result, location, energyCost, web3Enabled, 
                     <div className="col-span-3 space-y-6">
                         <div className="space-y-3">
                             <h3 className="text-xs font-black text-treetino-light uppercase tracking-[0.2em] flex items-center gap-2">
-                                <FileText className="w-3.5 h-3.5" /> Technical Specification
+                                <FileText className="w-3.5 h-3.5" /> Technická Specifikace
                             </h3>
                             <div className="rounded-xl border-2 border-slate-800 overflow-hidden">
                                 <table className="w-full text-xs">
@@ -194,9 +241,9 @@ export default function OfferModal({ result, location, energyCost, web3Enabled, 
                                 <Shield className="w-5 h-5 text-treetino-light" />
                             </div>
                             <div className="space-y-1">
-                                <h4 className="text-xs font-black text-white uppercase tracking-wider">Performance Guarantee</h4>
+                                <h4 className="text-xs font-black text-white uppercase tracking-wider">Garance Výkonu</h4>
                                 <p className="text-[10px] text-slate-500 leading-relaxed">
-                                    This quotation is based on high-fidelity environmental scan data. Energy trees include a 25-year structural warranty and AI-driven yield optimization as standard.
+                                    Tato nabídka vychází z vysoce přesných dat z environmentálního skenování. Energetické stromy standardně zahrnují 25letou záruku na konstrukci a optimalizaci výnosu řízenou AI.
                                 </p>
                             </div>
                         </div>
@@ -205,7 +252,7 @@ export default function OfferModal({ result, location, energyCost, web3Enabled, 
                     {/* Right: Street View Map */}
                     <div className="col-span-2 space-y-3 flex flex-col">
                         <h3 className="text-xs font-black text-treetino-light uppercase tracking-[0.2em] flex items-center gap-2">
-                            <Globe className="w-3.5 h-3.5" /> Deployment Site
+                            <Globe className="w-3.5 h-3.5" /> Místo Instalace
                         </h3>
                         <div className="flex-1 min-h-[300px] neo-panel overflow-hidden bg-slate-950 relative border-2 border-slate-800">
                             {(() => {
@@ -226,28 +273,26 @@ export default function OfferModal({ result, location, energyCost, web3Enabled, 
                                 }
                                 
                                 return (
-                                    <Map
-                                        mapboxAccessToken={TOKEN}
-                                        initialViewState={{
-                                            longitude: activePins[0].lng,
-                                            latitude: activePins[0].lat,
-                                            zoom: 17.5,
-                                            bounds: bounds
-                                        }}
-                                        mapStyle="mapbox://styles/mapbox/satellite-v9"
-                                        interactive={true}
-                                        style={{ width: '100%', height: '100%' }}
-                                    >
-                                        {activePins.map((p, idx) => (
-                                            <Marker key={idx} longitude={p.lng} latitude={p.lat} anchor="center">
-                                                <img src="/top_view.png" alt="Tree Instance" className="w-[80px] h-[80px] object-contain drop-shadow-2xl" />
-                                            </Marker>
-                                        ))}
-                                    </Map>
+                                    <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
+                                        <Map
+                                            defaultCenter={{ lat: activePins[0].lat, lng: activePins[0].lng }}
+                                            defaultZoom={18}
+                                            mapId={GOOGLE_MAP_ID}
+                                            disableDefaultUI={true}
+                                            gestureHandling="none"
+                                            style={{ width: '100%', height: '100%' }}
+                                        >
+                                            {activePins.map((p, idx) => (
+                                                <AdvancedMarker key={idx} position={{ lat: p.lat, lng: p.lng }}>
+                                                    <img src="/top_view.png" alt="Tree Instance" className="w-[80px] h-[80px] object-contain drop-shadow-2xl" />
+                                                </AdvancedMarker>
+                                            ))}
+                                        </Map>
+                                    </APIProvider>
                                 );
                             })()}
                             <div className="absolute bottom-4 left-4 flex items-center gap-2 pointer-events-none z-10">
-                                <span className="text-[8px] font-black text-slate-500 uppercase bg-slate-900/80 px-2 py-1 rounded border border-slate-700 backdrop-blur-md">Location Preview</span>
+                                <span className="text-[8px] font-black text-slate-500 uppercase bg-slate-900/80 px-2 py-1 rounded border border-slate-700 backdrop-blur-md">Náhled Lokality</span>
                             </div>
                         </div>
                     </div>
@@ -257,7 +302,7 @@ export default function OfferModal({ result, location, energyCost, web3Enabled, 
                 <div className="grid grid-cols-4 gap-4 border-2 border-slate-800 p-4 rounded-xl bg-slate-950">
                     <div className="space-y-2">
                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                            <User className="w-3 h-3 text-treetino-light" /> Client Name
+                            <User className="w-3 h-3 text-treetino-light" /> Jméno Klienta
                         </label>
                         <input
                             type="text"
@@ -268,18 +313,26 @@ export default function OfferModal({ result, location, energyCost, web3Enabled, 
                     </div>
                     <div className="space-y-2">
                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                            <MapPin className="w-3 h-3 text-treetino-light" /> Client Address
+                            <MapPin className="w-3 h-3 text-treetino-light" /> IČO (Auto-Doplnění)
+                            {isFetchingIco && <Loader2 className="w-3 h-3 animate-spin text-treetino-light" />}
                         </label>
                         <input
                             type="text"
-                            value={clientAddress}
-                            onChange={(e) => setClientAddress(e.target.value)}
+                            value={ico}
+                            onChange={handleIcoChange}
+                            placeholder="Zadejte 8 číslic..."
                             className="w-full bg-slate-900 border border-slate-800 rounded px-3 py-2 text-white text-sm focus:border-treetino-light outline-none"
+                            maxLength={8}
                         />
+                        {clientAddress && clientAddress !== 'Energetická 123, Technologické Město' && (
+                            <div className={`text-[9px] leading-tight font-bold pt-1 ${clientAddress.includes('Zkontrolujte') || clientAddress.includes('Zkuste to') ? 'text-red-400' : 'text-treetino-light opacity-80'}`}>
+                                {clientAddress}
+                            </div>
+                        )}
                     </div>
                     <div className="space-y-2">
                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                            <Zap className="w-3 h-3 text-treetino-light" /> Est Consumption
+                            <Zap className="w-3 h-3 text-treetino-light" /> Odhadovaná Spotřeba
                         </label>
                         <div className="relative flex items-center bg-slate-900 border border-slate-800 rounded focus-within:border-treetino-light transition-colors">
                             <input
@@ -311,7 +364,7 @@ export default function OfferModal({ result, location, energyCost, web3Enabled, 
                     </div>
                     <div className="space-y-2">
                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                            <User className="w-3 h-3 text-treetino-light" /> Client Logo
+                            <User className="w-3 h-3 text-treetino-light" /> Logo Klienta
                         </label>
                         <div className="relative">
                             <input
@@ -327,9 +380,9 @@ export default function OfferModal({ result, location, energyCost, web3Enabled, 
 
                 <div className="pt-6 border-t-2 border-slate-800 flex items-center justify-between">
                     <div className="flex items-center gap-6">
-                        <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest">Treetino B2B Sales Playground</p>
+                        <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest">Treetino B2B Obchodní Platforma</p>
                         <div className="h-4 w-px bg-slate-800" />
-                        <p className="text-[9px] font-black text-treetino-light uppercase tracking-widest">Confidence Score: 0.98</p>
+                        <p className="text-[9px] font-black text-treetino-light uppercase tracking-widest">Skóre spolehlivosti: 0.98</p>
                     </div>
                     <button
                         onClick={handleGeneratePdf}
@@ -337,7 +390,7 @@ export default function OfferModal({ result, location, energyCost, web3Enabled, 
                         className="neo-btn-primary !w-auto px-10 py-4 !rounded-full flex items-center gap-2"
                     >
                         {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                        {isGenerating ? 'Generating...' : 'Generate PDF Proposal'}
+                        {isGenerating ? 'Generuji...' : 'Generovat PDF Nabídku'}
                     </button>
                 </div>
             </motion.div>

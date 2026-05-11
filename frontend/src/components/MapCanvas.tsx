@@ -1,304 +1,136 @@
-import { useCallback, useRef, useState, useEffect } from 'react';
-import Map, { NavigationControl, Popup, type MapRef, type MapMouseEvent } from 'react-map-gl/mapbox';
-import 'mapbox-gl/dist/mapbox-gl.css';
-import mapboxgl from 'mapbox-gl';
-import type { FeatureCollection, Feature, Polygon } from 'geojson';
-import { MapPin, Globe, Sparkles, Zap, Sun, Wind, Loader2, Ruler } from 'lucide-react';
+import { useCallback, useState } from 'react';
+import { APIProvider, Map3D, Marker3D, MapMode, AltitudeMode, Pin } from '@vis.gl/react-google-maps';
+import { MapPin, Sparkles, Sun, Wind, Globe, X } from 'lucide-react';
+import { v4 as uuidv4 } from 'uuid';
 import { motion, AnimatePresence } from 'framer-motion';
-import type { SelectedLocation } from '../types';
+import type { SelectedLocation, PinLocation, SpotPotential } from '../types';
+import AddressSearch from './AddressSearch';
 
-const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN as string;
-const HAS_TOKEN = MAPBOX_TOKEN && MAPBOX_TOKEN !== 'your_mapbox_token_here';
+const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string || '';
+const GOOGLE_MAP_ID = import.meta.env.VITE_GOOGLE_MAP_ID as string || 'DEMO_MAP_ID';
+const HAS_KEY = GOOGLE_MAPS_API_KEY && GOOGLE_MAPS_API_KEY !== 'your_google_maps_key_here';
 
-const INITIAL_VIEW = { longitude: 15.5169, latitude: 49.4067, zoom: 17, pitch: 60, bearing: -17 };
-
-// Building layer paint for 3D extrusions
-const BUILDING_LAYER: mapboxgl.FillExtrusionLayer = {
-    id: '3d-buildings',
-    source: 'composite',
-    'source-layer': 'building',
-    filter: ['==', 'extrude', 'true'],
-    type: 'fill-extrusion',
-    minzoom: 14,
-    paint: {
-        'fill-extrusion-color': '#1e293b',
-        'fill-extrusion-height': ['get', 'height'],
-        'fill-extrusion-base': ['get', 'min_height'],
-        'fill-extrusion-opacity': 0.7,
-    },
-};
-
-// Highlighted building
-const HIGHLIGHT_LAYER: mapboxgl.FillExtrusionLayer = {
-    id: 'building-highlight',
-    source: 'highlight-source',
-    type: 'fill-extrusion',
-    paint: {
-        'fill-extrusion-color': '#2762AD',
-        'fill-extrusion-height': ['get', 'height'],
-        'fill-extrusion-base': ['get', 'min_height'],
-        'fill-extrusion-opacity': 0.85,
-    },
-};
+const INITIAL_VIEW = { lat: 50.0811, lng: 14.4512 }; // Prague (Supported 3D Mesh)
 
 interface Props {
     selectedLocation: SelectedLocation | null;
     onLocationSelect: (loc: SelectedLocation) => void;
-    onPinsChange?: (pins: { lat: number; lng: number }[]) => void;
+    onPinsChange?: (pins: PinLocation[]) => void;
+    product?: string;
 }
 
-// Estimate area from GeoJSON polygon coordinates (Shoelace formula in meters approx)
-function estimateAreaM2(coords: number[][]): number {
-    // Simple Shoelace on lng/lat → rough m² at mid-latitudes (1° ≈ 111km lat, ≈ 75km lng at 50°)
-    const n = coords.length;
-    if (n < 3) return 0;
-    let area = 0;
-    for (let i = 0; i < n; i++) {
-        const j = (i + 1) % n;
-        const xi = coords[i][0] * 75000; // lng to meters
-        const yi = coords[i][1] * 111000; // lat to meters
-        const xj = coords[j][0] * 75000;
-        const yj = coords[j][1] * 111000;
-        area += xi * yj - xj * yi;
-    }
-    return Math.abs(area / 2);
-}
+export default function MapCanvas({ onLocationSelect, selectedLocation, onPinsChange, product }: Props) {
+    const [pins, setPins] = useState<PinLocation[]>(selectedLocation?.pins || []);
 
-export default function MapCanvas({ onLocationSelect, selectedLocation, onPinsChange }: Props) {
-    const mapRef = useRef<MapRef>(null);
-    const [pins, setPins] = useState<{ lng: number; lat: number }[]>([]);
-    const [highlightGeoJSON, setHighlightGeoJSON] = useState<FeatureCollection | null>(null);
-
-    const handleClick = useCallback((e: MapMouseEvent) => {
-        const map = mapRef.current?.getMap();
-        if (!map) return;
-
-        const { lng, lat } = e.lngLat;
-        const newPins = [...pins, { lng, lat }];
+    const handleClick = useCallback((e: any) => {
+        if (!e.detail.latLng) return;
+        const { lat, lng } = e.detail.latLng;
+        
+        const newPin: PinLocation = {
+            id: uuidv4(),
+            lat,
+            lng,
+            type: (product || 'main-tree') as any
+        };
+        
+        const newPins = [...pins, newPin];
         setPins(newPins);
         onPinsChange?.(newPins);
 
-        // Try to find a building at the click point
-        const features = map.queryRenderedFeatures(e.point, { layers: ['3d-buildings'] });
-        let roofArea: number | null = null;
-        let buildingId: string | undefined;
-        let height: number | undefined;
-        const isBuilding = features.length > 0;
-
-        if (isBuilding) {
-            const feature = features[0];
-            buildingId = String(feature.id ?? '');
-            height = feature.properties?.height;
-
-            // Highlight
-            const fc: FeatureCollection = {
-                type: 'FeatureCollection',
-                features: [feature as unknown as Feature],
-            };
-            setHighlightGeoJSON(fc);
-
-            // Estimate area from geometry
-            if (feature.geometry.type === 'Polygon') {
-                const outerRing = (feature.geometry as Polygon).coordinates[0];
-                roofArea = Math.round(estimateAreaM2(outerRing));
-            }
-        } else {
-            setHighlightGeoJSON(null);
-        }
-
-        // Only query building data tightly on the first pin placement
-        if (newPins.length === 1) {
+        if (!selectedLocation) {
             onLocationSelect({
                 lat: Math.round(lat * 10000) / 10000,
                 lon: Math.round(lng * 10000) / 10000,
-                roofArea,
-                height,
-                buildingId,
-                isBuilding
+                pins: newPins,
+                potential: undefined // will be fetched by App
             });
         }
-    }, [onLocationSelect, pins, onPinsChange]);
+    }, [pins, product, selectedLocation, onPinsChange, onLocationSelect]);
 
-    // Update highlight source whenever it changes
-    useEffect(() => {
-        const map = mapRef.current?.getMap();
-        if (!map) return;
-        const src = map.getSource('highlight-source') as mapboxgl.GeoJSONSource | undefined;
-        if (src && highlightGeoJSON) {
-            src.setData(highlightGeoJSON);
-        } else if (src) {
-            src.setData({ type: 'FeatureCollection', features: [] });
-        }
-    }, [highlightGeoJSON]);
+    const handleRemovePin = useCallback((id: string) => {
+        const newPins = pins.filter(p => p.id !== id);
+        setPins(newPins);
+        onPinsChange?.(newPins);
+    }, [pins, onPinsChange]);
 
-    const onMapLoad = useCallback(() => {
-        const map = mapRef.current?.getMap();
-        if (!map) return;
-
-        // Add 3D building layer
-        const layers = map.getStyle().layers;
-        let labelLayerId: string | undefined;
-        for (const layer of layers || []) {
-            if (layer.type === 'symbol' && (layer.layout as Record<string, unknown>)?.['text-field']) {
-                labelLayerId = layer.id;
-                break;
-            }
-        }
-
-        if (!map.getLayer('3d-buildings')) {
-            map.addLayer(BUILDING_LAYER, labelLayerId);
-        }
-
-        // Add highlight source + layer
-        if (!map.getSource('highlight-source')) {
-            map.addSource('highlight-source', {
-                type: 'geojson',
-                data: { type: 'FeatureCollection', features: [] },
-            });
-            map.addLayer(HIGHLIGHT_LAYER);
-        }
-    }, []);
-
-    // ─── Fallback: no token ───────────────────────────────
-    if (!HAS_TOKEN) {
-        return (
-            <FallbackMap onLocationSelect={onLocationSelect} selectedLocation={selectedLocation} onPinsChange={onPinsChange} />
-        );
+    if (!HAS_KEY) {
+        return <FallbackMap />;
     }
 
     return (
-        <div className="absolute inset-0">
-            <Map
-                ref={mapRef}
-                mapboxAccessToken={MAPBOX_TOKEN}
-                initialViewState={INITIAL_VIEW}
-                mapStyle="mapbox://styles/mapbox/satellite-streets-v12"
-                onClick={handleClick}
-                onLoad={onMapLoad}
-                cursor="crosshair"
-                antialias
-            >
-                <NavigationControl position="top-right" showCompass showZoom />
-
-                {/* Live Evaluation Popup */}
-                {selectedLocation && selectedLocation.potential && (
-                    <Popup
-                        longitude={selectedLocation.lon}
-                        latitude={selectedLocation.lat}
-                        anchor="bottom"
-                        offset={45}
-                        closeButton={false}
-                        closeOnClick={false}
-                        className="z-50 neo-panel"
-                    >
-                        <div className="space-y-2">
-                            <div className="flex items-center gap-2 text-[10px] font-black text-treetino-light uppercase tracking-[0.2em]">
-                                <Sparkles className="w-3 h-3" /> Spot Evaluated
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="flex items-center gap-2">
-                                    <div className="w-6 h-6 rounded-md bg-amber-500/10 flex items-center justify-center">
-                                        <Sun className="w-3 h-3 text-amber-500" />
-                                    </div>
-                                    <div>
-                                        <div className="text-[8px] text-slate-500">Sun Index</div>
-                                        <div className="text-xs font-bold text-white">{selectedLocation.potential.solarIndex}%</div>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <div className="w-6 h-6 rounded-md bg-blue-500/10 flex items-center justify-center">
-                                        <Wind className="w-3 h-3 text-blue-500" />
-                                    </div>
-                                    <div>
-                                        <div className="text-[8px] text-slate-500">Wind Avg</div>
-                                        <div className="text-xs font-bold text-white">{selectedLocation.potential.avgWindSpeed}m/s</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </Popup>
-                )}
-            </Map>
-
-            {/* Pin overlay */}
-            <AnimatePresence>
-                {pins.map((p, idx) => (
-                    <PinOverlay key={`${p.lat}-${p.lng}-${idx}`} lat={p.lat} lng={p.lng} mapRef={mapRef} />
-                ))}
-            </AnimatePresence>
+        <div className="absolute inset-0 map-container">
+            <APIProvider apiKey={GOOGLE_MAPS_API_KEY} libraries={['marker', 'maps3d', 'places']} version="alpha">
+                <AddressSearch />
+                <Map3D
+                    defaultCenter={{ ...INITIAL_VIEW, altitude: 500 }}
+                    defaultRange={1000}
+                    defaultHeading={45}
+                    defaultTilt={65}
+                    mode={MapMode.SATELLITE}
+                    onCenterChanged={(e: any) => {
+                        // Position in 3D maps is different, but we can still handle clicks if supported
+                    }}
+                    onClick={(e: any) => {
+                        const position = e.detail?.position;
+                        if (!position) return;
+                        // Depending on the API version, it might be a class with lat() or a literal with lat
+                        const lat = typeof position.lat === 'function' ? position.lat() : position.lat;
+                        const lng = typeof position.lng === 'function' ? position.lng() : position.lng;
+                        handleClick({ detail: { latLng: { lat, lng } } });
+                    }}
+                >
+                    {pins.map((pin) => (
+                        <PinOverlay 
+                            key={pin.id} 
+                            pin={pin} 
+                            potential={selectedLocation?.potential}
+                            onRemove={() => handleRemovePin(pin.id)} 
+                        />
+                    ))}
+                </Map3D>
+            </APIProvider>
         </div>
     );
 }
 
-// ─── Pin rendered via screen projection ───────────────────
-function PinOverlay({ lat, lng, mapRef }: { lat: number; lng: number; mapRef: React.RefObject<MapRef | null> }) {
-    const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
-
-    useEffect(() => {
-        const map = mapRef.current?.getMap();
-        if (!map) return;
-        const update = () => {
-            const p = map.project([lng, lat]);
-            setPos({ x: p.x, y: p.y });
-        };
-        update();
-        map.on('move', update);
-        return () => { map.off('move', update); };
-    }, [lat, lng, mapRef]);
-
-    if (!pos) return null;
+function PinOverlay({ pin, potential, onRemove }: { pin: PinLocation, potential?: SpotPotential, onRemove: () => void }) {
+    // Determine color based on product type
+    let colorClass = "fill-treetino-light shadow-[0_0_15px_rgba(88,204,168,0.5)] bg-treetino-light/30 border-treetino-light";
+    let pinColor = "#58cca8"; // tree green
+    let iconLabel = "MAIN TREE";
+    
+    if (pin.type === 'small-tree') {
+        colorClass = "fill-amber-400 shadow-[0_0_15px_rgba(251,191,36,0.5)] bg-amber-400/30 border-amber-400";
+        pinColor = "#fbbf24";
+        iconLabel = "SMALL TREE";
+    } else if (pin.type === 'standalone-turbine') {
+        colorClass = "fill-blue-400 shadow-[0_0_15px_rgba(96,165,250,0.5)] bg-blue-400/30 border-blue-400";
+        pinColor = "#60a5fa";
+        iconLabel = "TURBINE";
+    }
 
     return (
-        <motion.div
-            key={`${lat}-${lng}`}
-            initial={{ y: -40, opacity: 0, scale: 0.5 }}
-            animate={{ y: 0, opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-            className="absolute z-20 pointer-events-none"
-            style={{ left: pos.x - 16, top: pos.y - 40 }}
-        >
-            <MapPin className="w-8 h-8 text-treetino-light drop-shadow-[0_4px_8px_rgba(39,98,173,0.5)] fill-treetino-light/20" />
-            <div className="mt-0.5 text-[9px] font-black text-treetino-light bg-slate-950/80 px-2 py-0.5 rounded-md border border-treetino-light/30 text-center whitespace-nowrap">
-                {lat.toFixed(4)}°N, {lng.toFixed(4)}°E
-            </div>
-        </motion.div>
+        <>
+            <Marker3D 
+                position={{ lat: pin.lat, lng: pin.lng, altitude: 0 }}
+                altitudeMode={AltitudeMode.CLAMP_TO_GROUND}
+                onClick={(e: any) => {
+                    onRemove();
+                }}
+            >
+                <Pin background={pinColor} borderColor={colorClass.includes('amber') ? '#d97706' : colorClass.includes('blue') ? '#2563eb' : '#059669'} glyphColor="white" />
+            </Marker3D>
+        </>
     );
 }
 
-// ─── Fallback grid when no Mapbox token ───────────────────
-function FallbackMap({ onLocationSelect, selectedLocation, onPinsChange }: Props) {
-    const ref = useRef<HTMLDivElement>(null);
-    const [clickCount, setClickCount] = useState(0);
-
-    const handleClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-        if (!ref.current) return;
-        const rect = ref.current.getBoundingClientRect();
-        const px = (e.clientX - rect.left) / rect.width;
-        const py = (e.clientY - rect.top) / rect.height;
-        
-        const newCount = clickCount + 1;
-        setClickCount(newCount);
-        
-        // For the fallback map we just emulate pins in a fixed array shape based on clicks
-        const fakePins = Array.from({ length: newCount }).map((_, i) => ({ lat: 55, lng: 5 }));
-        onPinsChange?.(fakePins);
-
-        if (newCount === 1) {
-            onLocationSelect({
-                lat: Math.round((55 - py * 10) * 10000) / 10000,
-                lon: Math.round((5 + px * 20) * 10000) / 10000,
-                roofArea: null,
-                isBuilding: false
-            });
-        }
-    }, [onLocationSelect, clickCount, onPinsChange]);
-
+function FallbackMap() {
     return (
-        <div ref={ref} onClick={handleClick} className="map-grid absolute inset-0 cursor-crosshair">
-            <div className="absolute top-4 left-4 flex items-center gap-2 text-[10px] text-slate-600 font-mono uppercase tracking-widest">
-                <Globe className="w-3 h-3" />
-                No Mapbox token — Add VITE_MAPBOX_TOKEN to .env
+        <div className="map-grid absolute inset-0 cursor-crosshair flex items-center justify-center bg-slate-900">
+            <div className="flex flex-col items-center gap-2 text-slate-500 font-mono text-center">
+                <Globe className="w-8 h-8 opacity-50 mb-4" />
+                Není poskytnut Google Maps API klíč.<br/>
+                Přidejte VITE_GOOGLE_MAPS_API_KEY a VITE_GOOGLE_MAP_ID do souboru .env.
             </div>
             <div className="absolute left-1/2 top-0 bottom-0 w-px bg-slate-700/20" />
             <div className="absolute top-1/2 left-0 right-0 h-px bg-slate-700/20" />

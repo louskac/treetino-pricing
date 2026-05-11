@@ -88,8 +88,29 @@ def draw_page_1(c: canvas.Canvas, data: dict, assets_path: str):
             print("Failed to decode logo:", e)
     else:
         c.setFillColor(colors.HexColor("#2a1b7a"))
-        c.setFont("Roboto-Bold", 80)
-        c.drawCentredString(W / 2, H - 450, data.get("clientName", "M - KOVO"))
+        client_name = data.get("clientName", "M - KOVO")
+        max_w = W - 100
+        font_size = 80
+        font_name = "Roboto-Bold"
+        
+        from reportlab.lib.utils import simpleSplit
+        lines = simpleSplit(client_name, font_name, font_size, max_w)
+        
+        while font_size > 20:
+            lines = simpleSplit(client_name, font_name, font_size, max_w)
+            too_wide = any(c.stringWidth(ln, font_name, font_size) > max_w for ln in lines)
+            if len(lines) <= 2 and not too_wide:
+                break
+            font_size -= 4
+
+        line_height = font_size * 1.15
+        total_h = (len(lines) - 1) * line_height
+        y_pos = (H - 450) + (total_h / 2.0)
+        
+        c.setFont(font_name, font_size)
+        for ln in lines:
+            c.drawCentredString(W / 2, y_pos, ln)
+            y_pos -= line_height
     
     # 4. Treetino Logo Bottom Center
     logo_path = os.path.join(assets_path, "branding", "logo_color.png")
@@ -197,7 +218,7 @@ def draw_page_3(c: canvas.Canvas, data: dict, assets_path: str):
     c.setFillColor(colors.black)
     c.setFont("Roboto-Bold", 10)
     client_name = data.get("clientName", "M KOVO")
-    client_addr = data.get("clientAddress", "143, Rantířov, 588 41, Czech Republic")
+    client_addr = data.get("clientAddress", "143, Rantířov, 588 41, Česká republika")
     
     c.drawString(40, H - 50, f"NABÍDKA {result.get('numberOfTurbines', 3)}X STROM V1 AREÁL {str(client_name).upper()}")
     c.setFont("Roboto", 7)
@@ -698,7 +719,7 @@ def draw_page_4(c: canvas.Canvas, data: dict, assets_path: str):
     c.line(bx-3, by-1, bx+3, by-1) # crossbar 2
     c.setFillColor(colors.HexColor("#64748b"))
     c.setFont("Roboto", 8)
-    c.drawString(leg_x + 28, leg_y - 96, "From Grid")
+    c.drawString(leg_x + 28, leg_y - 96, "Ze sítě")
     
     # 4. Blue - Ze solaru (Solar panel vector)
     c.setFillColor(colors.HexColor("#60a5fa"))
@@ -757,7 +778,7 @@ def draw_page_5(c: canvas.Canvas, data: dict, assets_path: str):
     
     c.setFont("Roboto", 9)
     c.setFillColor(colors.HexColor("#64748b"))
-    c.drawString(60, H - 75, "143, Rantířov, 588 41, Czech Republic  |  Tomáš Míčke  |  2. 2. 2026")
+    c.drawString(60, H - 75, "143, Rantířov, 588 41, Česká republika  |  Tomáš Míčke  |  2. 2. 2026")
 
     # 2. DIAGRAM ZTRÁT SYSTÉMU BOX
     c.setStrokeColor(colors.HexColor("#cbd5e1"))
@@ -1066,25 +1087,45 @@ def draw_page_6(c: canvas.Canvas, data: dict, assets_path: str):
     c.drawRightString(W - 45, row_y + 6, format_czk(final_price_vat))
     
     # TOTALS BLOCK
-    tot_y = row_y - 120
+    tot_y = row_y - 140
+    box_height = 120
     c.setFillColor(BG_COLOR)
-    c.rect(W/2 + 20, tot_y, (W/2) - 60, 100, fill=1, stroke=0)
+    c.rect(W/2 + 20, tot_y, (W/2) - 60, box_height, fill=1, stroke=0)
     
     c.setFillColor(TEXT_COLOR)
     c.setFont("Roboto", 9)
-    # Right Totals
-    c.drawString(W/2 + 30, tot_y + 75, "Cena celkem před slevou:")
-    c.drawRightString(W - 45, tot_y + 75, format_czk(total_before_discount))
     
-    c.drawString(W/2 + 30, tot_y + 60, "Sleva celkem:")
-    c.drawRightString(W - 45, tot_y + 60, f"({format_units(discount_percent)} %) {format_czk(discount_amount)}")
+    # 1. Cena bez DPH
+    c.drawString(W/2 + 30, tot_y + 100, "Cena bez DPH:")
+    c.drawRightString(W - 45, tot_y + 100, format_czk(final_price))
     
+    # 2. DPH
+    c.drawString(W/2 + 30, tot_y + 85, "DPH (21%):")
+    c.drawRightString(W - 45, tot_y + 85, format_czk(vat_amount))
+    
+    # 3. Cena s DPH
+    c.drawString(W/2 + 30, tot_y + 70, "Cena s DPH:")
+    c.drawRightString(W - 45, tot_y + 70, format_czk(final_price_vat))
+    
+    # 4. Dotace
+    subsidy_amount = final_price * 0.30
+    c.drawString(W/2 + 30, tot_y + 55, "Předpokládaná dotace:")
+    c.drawRightString(W - 45, tot_y + 55, f"- {format_czk(subsidy_amount)}")
+    
+    # 5. Finální cena po dotaci
     c.setFont("Roboto-Bold", 10)
-    c.drawString(W/2 + 30, tot_y + 35, "Konečná cena:")
-    c.drawRightString(W - 45, tot_y + 35, format_czk(final_price))
+    c.drawString(W/2 + 30, tot_y + 35, "Finální cena po dotaci:")
+    c.drawRightString(W - 45, tot_y + 35, format_czk(result.get("subsidyPrice", final_price * 0.70)))
     
-    c.drawString(W/2 + 30, tot_y + 15, "Konečná cena vč. daně:")
-    c.drawRightString(W - 45, tot_y + 15, format_czk(final_price_vat))
+    # 6. Personalizovaná sleva (Dynamické pole)
+    client_name = data.get('clientName', 'klienta')
+    if not client_name or client_name == '':
+        client_name = 'klienta'
+    
+    discount_msg = f"Celková sleva pro {client_name} činí: {format_czk(discount_amount)}"
+    c.setFont("Roboto-Bold", 8)
+    c.setFillColor(colors.HexColor("#2a1b7a"))
+    c.drawString(W/2 + 30, tot_y + 12, discount_msg)
     
     # Left DPH block
     c.setFont("Roboto-Bold", 12)
@@ -1125,6 +1166,17 @@ def draw_page_6(c: canvas.Canvas, data: dict, assets_path: str):
     c.setFont("Roboto-Bold", 11)
     c.drawString(40, text_y - 70, msg)
     c.line(40, text_y - 72, 40 + c.stringWidth(msg, "Roboto-Bold", 11), text_y - 72)
+
+    # Active Hyperlink
+    link_url = "https://www.treetino.com"
+    link_text = "Více informací na www.treetino.com"
+    link_y = text_y - 100
+    c.setFont("Roboto-Bold", 11)
+    c.setFillColor(colors.HexColor("#0000EE")) # Standard link blue
+    c.drawString(40, link_y, link_text)
+    text_width = c.stringWidth(link_text, "Roboto-Bold", 11)
+    # rect is (x1, y1, x2, y2)
+    c.linkURL(link_url, (40, link_y - 2, 40 + text_width, link_y + 11), relative=1)
 
     # Footer signature
     c.setFillColor(MUTED_COLOR)

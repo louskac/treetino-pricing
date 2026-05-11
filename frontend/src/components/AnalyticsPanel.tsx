@@ -43,18 +43,18 @@ export default function AnalyticsPanel({ result, energyCost, web3Enabled, esgEna
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <TrendingUp className="w-5 h-5 text-treetino-light" />
-                        <h3 className="text-sm font-black text-white uppercase tracking-tight">Financials</h3>
+                        <h3 className="text-sm font-black text-white uppercase tracking-tight">Finance</h3>
                     </div>
                 </div>
 
                 <div className="space-y-4">
                     <div className="p-4 rounded-xl border border-white/10 bg-slate-950/50" style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
-                        <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-1">ROI Period</p>
+                        <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-1">Návratnost</p>
                         <p className="text-3xl font-black text-treetino-light">
-                            {paybackYears} <span className="text-xs uppercase">Years</span>
+                            {paybackYears} <span className="text-xs uppercase">Roků</span>
                         </p>
                         <div className="flex items-center gap-2 mt-1">
-                            <span className="text-[10px] font-bold text-slate-400">{roiPercentage}% Yield</span>
+                            <span className="text-[10px] font-bold text-slate-400">{roiPercentage}% Výnos</span>
                             {web3Enabled && (
                                 <span className="neo-badge">P2P Bonus</span>
                             )}
@@ -63,11 +63,11 @@ export default function AnalyticsPanel({ result, energyCost, web3Enabled, esgEna
 
                     <div className="flex flex-col gap-2 mt-auto pt-2 border-t border-white/5">
                         <div className="flex justify-between items-center">
-                            <p className="text-[9px] text-slate-500 font-extrabold uppercase tracking-tight">Investment</p>
+                            <p className="text-[9px] text-slate-500 font-extrabold uppercase tracking-tight">Investice</p>
                             <p className="text-sm font-black text-white">{investment.toLocaleString()} CZK</p>
                         </div>
                         <div className="flex justify-between items-center">
-                            <p className="text-[9px] text-slate-500 font-extrabold uppercase tracking-tight">Savings/YR</p>
+                            <p className="text-[9px] text-slate-500 font-extrabold uppercase tracking-tight">Úspora/Rok</p>
                             <p className="text-sm font-black text-treetino-accent">{annualSavings.toLocaleString()} CZK</p>
                         </div>
                     </div>
@@ -79,16 +79,16 @@ export default function AnalyticsPanel({ result, energyCost, web3Enabled, esgEna
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <Leaf className="w-5 h-5 text-treetino-light" />
-                        <h3 className="text-sm font-black text-white uppercase tracking-tight">Eco Impact</h3>
+                        <h3 className="text-sm font-black text-white uppercase tracking-tight">Ekologický Dopad</h3>
                     </div>
                     {esgEnabled && <Shield className="w-4 h-4 text-treetino-light" />}
                 </div>
 
                 <div className="space-y-5">
                     <div className="p-4 rounded-xl border border-white/10 bg-slate-950/50" style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
-                        <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-1">CO₂ Offset</p>
+                        <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-1">Úspora CO₂</p>
                         <p className="text-3xl font-black text-white">
-                            {co2Offset.toFixed(1)} <span className="text-xs uppercase">Tons/YR</span>
+                            {co2Offset.toFixed(1)} <span className="text-xs uppercase">Tun/Rok</span>
                         </p>
                     </div>
 
@@ -99,7 +99,7 @@ export default function AnalyticsPanel({ result, energyCost, web3Enabled, esgEna
                             </div>
                             <div>
                                 <p className="text-sm font-black text-white leading-none">{treesEquiv.toLocaleString()}</p>
-                                <p className="text-[9px] text-slate-500 font-bold uppercase tracking-tighter">Trees Equivalent</p>
+                                <p className="text-[9px] text-slate-500 font-bold uppercase tracking-tighter">Ekvivalent Stromů</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-4">
@@ -108,7 +108,7 @@ export default function AnalyticsPanel({ result, energyCost, web3Enabled, esgEna
                             </div>
                             <div>
                                 <p className="text-sm font-black text-white leading-none">{evKm} KM</p>
-                                <p className="text-[9px] text-slate-500 font-bold uppercase tracking-tighter">EV Range Offset</p>
+                                <p className="text-[9px] text-slate-500 font-bold uppercase tracking-tighter">Ekvivalent Nájezdu EV</p>
                             </div>
                         </div>
                     </div>
@@ -127,12 +127,12 @@ function EnergyChart({ data, totalKwh, lastWeekKwh }: { data: ROIResult['monthly
                     <div className="w-8 h-8 rounded-lg bg-treetino-light/10 border-2 border-treetino-light/20 flex items-center justify-center">
                         <Sparkles className="w-4 h-4 text-treetino-light" />
                     </div>
-                    <h3 className="text-sm font-black text-white uppercase tracking-tight">Energy Stack</h3>
+                    <h3 className="text-sm font-black text-white uppercase tracking-tight">Výroba Energie</h3>
                 </div>
                 <div className="flex flex-col text-right">
-                    <span className="text-[9px] text-slate-500 font-black uppercase tracking-tighter block">LAST WEEK</span>
+                    <span className="text-[9px] text-slate-500 font-black uppercase tracking-tighter block">MINULÝ TÝDEN</span>
                     <span className="text-sm font-black text-treetino-accent">{lastWeekKwh.toLocaleString()} kWh</span>
-                    <span className="text-[8px] text-slate-600 font-bold uppercase mt-1">REAL DATA BLEND</span>
+                    <span className="text-[8px] text-slate-600 font-bold uppercase mt-1">REÁLNÁ DATA</span>
                 </div>
             </div>
 
@@ -168,8 +168,8 @@ function EnergyChart({ data, totalKwh, lastWeekKwh }: { data: ROIResult['monthly
                             formatter={(v, name) => [`${Number(v).toLocaleString()} kWh`, name]}
                         />
                         <Legend wrapperStyle={{ fontSize: '9px', fontWeight: 900, textTransform: 'uppercase', paddingTop: '15px' }} iconType="rect" iconSize={8} />
-                        <Bar dataKey="solar" name="Solar" stackId="a" fill="#2762AD" />
-                        <Bar dataKey="wind" name="Wind" stackId="a" fill="#E8F1FF" />
+                        <Bar dataKey="solar" name="Solární" stackId="a" fill="#2762AD" />
+                        <Bar dataKey="wind" name="Větrná" stackId="a" fill="#E8F1FF" />
                     </BarChart>
                 </ResponsiveContainer>
             </div>

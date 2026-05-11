@@ -102,7 +102,7 @@ async def handle_calculate_roi(request: ROICalculationRequest):
             solar_resp, wind_resp = await asyncio.gather(solar_res_task, wind_res_task)
             
             if solar_resp.status_code != 200 or wind_resp.status_code != 200:
-                raise HTTPException(status_code=502, detail="External API error")
+                raise HTTPException(status_code=502, detail="Chyba externího API")
                 
             solar_data = solar_resp.json()
             wind_data = wind_resp.json()
