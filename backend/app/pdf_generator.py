@@ -42,12 +42,12 @@ def draw_page_1(c: canvas.Canvas, data: dict, assets_path: str):
             
         c.restoreState()
     
-    # 2. Black Title Box with rounded corners
+    # 2. Blue Title Box with rounded corners
     title = f"NABÍDKA 3X STROM V1 - {data.get('clientName', 'M - KOVO').upper()}"
     c.setFont("Roboto-Bold", 14)
     tw = c.stringWidth(title, "Roboto-Bold", 14)
     
-    c.setFillColor(colors.black)
+    c.setFillColor(colors.HexColor("#1e3a8a"))
     c.roundRect(W - tw - 60, H - 110, tw + 40, 24, 6, fill=1, stroke=0)
     c.setFillColor(colors.white)
     c.drawString(W - tw - 40, H - 103, title)
@@ -56,7 +56,7 @@ def draw_page_1(c: canvas.Canvas, data: dict, assets_path: str):
     c.setFont("Roboto-Bold", 10)
     sub1 = "Treetino corp s.r.o."
     sw1 = c.stringWidth(sub1, "Roboto-Bold", 10)
-    c.setFillColor(colors.black)
+    c.setFillColor(colors.HexColor("#1e3a8a"))
     c.roundRect(W - sw1 - 60, H - 138, sw1 + 40, 20, 6, fill=1, stroke=0)
     c.setFillColor(colors.white)
     c.drawString(W - sw1 - 40, H - 132, sub1)
@@ -64,7 +64,7 @@ def draw_page_1(c: canvas.Canvas, data: dict, assets_path: str):
     # Date Box
     sub2 = "Vystaveno: 02.02.2026"
     sw2 = c.stringWidth(sub2, "Roboto-Bold", 10)
-    c.setFillColor(colors.black)
+    c.setFillColor(colors.HexColor("#1e3a8a"))
     c.roundRect(W - sw2 - 60, H - 162, sw2 + 40, 20, 6, fill=1, stroke=0)
     c.setFillColor(colors.white)
     c.drawString(W - sw2 - 40, H - 156, sub2)
@@ -1409,14 +1409,13 @@ def generate_pdf(data: dict) -> bytes:
     
     c = canvas.Canvas(buffer, pagesize=A4)
     
-    draw_page_1(c, data, assets_path)
-    draw_page_2(c, data, assets_path)
-    draw_page_3(c, data, assets_path)
-    draw_page_4(c, data, assets_path)
-    draw_page_5(c, data, assets_path)
-    draw_page_6(c, data, assets_path)
-    draw_page_7(c, data, assets_path)
-    draw_page_8(c, data, assets_path)
+    draw_page_1(c, data, assets_path)  # Cover
+    draw_page_2(c, data, assets_path)  # Product
+    draw_page_4(c, data, assets_path)  # Analytics 1
+    draw_page_5(c, data, assets_path)  # Analytics 2
+    draw_page_3(c, data, assets_path)  # Map
+    draw_page_6(c, data, assets_path)  # Pricing
+    draw_page_7(c, data, assets_path)  # Contact / Upsell
     
     c.save()
     pdf_bytes = buffer.getvalue()

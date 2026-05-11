@@ -386,11 +386,13 @@ export default function OfferModal({ result, location, energyCost, web3Enabled, 
                     </div>
                     <button
                         onClick={handleGeneratePdf}
-                        disabled={isGenerating}
-                        className="neo-btn-primary !w-auto px-10 py-4 !rounded-full flex items-center gap-2"
+                        disabled={isGenerating || location.pins.some(p => p.type !== 'main-tree')}
+                        className={`neo-btn-primary !w-auto px-10 py-4 !rounded-full flex items-center gap-2 ${location.pins.some(p => p.type !== 'main-tree') ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                         {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                        {isGenerating ? 'Generuji...' : 'Generovat PDF Nabídku'}
+                        {location.pins.some(p => p.type !== 'main-tree') 
+                            ? 'Pouze pro V1 Strom' 
+                            : (isGenerating ? 'Generuji...' : 'Generovat PDF Nabídku')}
                     </button>
                 </div>
             </motion.div>
