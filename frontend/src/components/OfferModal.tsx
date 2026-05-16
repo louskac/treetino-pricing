@@ -273,7 +273,7 @@ export default function OfferModal({ result, location, energyCost, web3Enabled, 
                                 }
                                 
                                 return (
-                                    <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
+                                    <APIProvider apiKey={GOOGLE_MAPS_API_KEY} libraries={['marker', 'maps3d', 'places']} version="alpha">
                                         <Map
                                             defaultCenter={{ lat: activePins[0].lat, lng: activePins[0].lng }}
                                             defaultZoom={18}
