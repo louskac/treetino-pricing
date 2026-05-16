@@ -154,7 +154,8 @@ export default function OfferModal({ result, location, energyCost, web3Enabled, 
                     esgEnabled,
                     clientLogoBase64,
                     consumptionOverride: finalOverride,
-                    mapApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY
+                    mapApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
+                    mapboxToken: import.meta.env.VITE_MAPBOX_TOKEN
                 })
             });
 

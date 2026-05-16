@@ -14,193 +14,255 @@ W, H = A4
 def draw_page_1(c: canvas.Canvas, data: dict, assets_path: str):
     import reportlab.lib.utils as utils
     
-    # 1. Main Cover Image (Top Header) - with Aspect Ratio Crop
+    # 1. Main Cover Image (strom1.png) + Dark Overlay
     main_tree_path = os.path.join(assets_path, "products", "strom1.png")
-    if not os.path.exists(main_tree_path):
-        main_tree_path = os.path.join(assets_path, "products", "main-tree.jpg")
-        
+    
+    # Fill background with dark color
+    c.saveState()
+    c.setFillColor(colors.HexColor("#0f172a"))
+    c.rect(0, 0, W, H, fill=1, stroke=0)
+    c.restoreState()
+    
     if os.path.exists(main_tree_path):
         img_cover = utils.ImageReader(main_tree_path)
         img_w, img_h = img_cover.getSize()
         
-        target_w = W
+        # Fit tree in the lower/middle section
+        target_w = W * 1.2
         target_h = (target_w / float(img_w)) * img_h
+        x_pos = (W - target_w) / 2.0
+        y_pos = (H - target_h) / 2.0 - 50
         
-        c.saveState()
-        path = c.beginPath()
-        path.rect(0, H - 220, W, 220)
-        c.clipPath(path, stroke=0, fill=0)
+        c.drawImage(main_tree_path, x_pos, y_pos, width=target_w, height=target_h, mask='auto')
         
-        if target_h < 220:
-            target_h = 220
-            target_w = (target_h / float(img_h)) * img_w
-            x_pos = (W - target_w) / 2.0
-            c.drawImage(main_tree_path, x_pos, H - 220, width=target_w, height=target_h)
-        else:
-            y_pos = (H - 110) - (target_h / 2.0)
-            c.drawImage(main_tree_path, 0, y_pos, width=target_w, height=target_h)
-            
-        c.restoreState()
-    
-    # 2. Blue Title Box with rounded corners
-    title = f"NABÍDKA 3X STROM V1 - {data.get('clientName', 'M - KOVO').upper()}"
-    c.setFont("Roboto-Bold", 14)
-    tw = c.stringWidth(title, "Roboto-Bold", 14)
-    
-    c.setFillColor(colors.HexColor("#000000"))
-    c.roundRect(W - tw - 60, H - 110, tw + 40, 24, 6, fill=1, stroke=0)
-    c.setFillColor(colors.white)
-    c.drawString(W - tw - 40, H - 103, title)
-    
-    # Supplier Name Box
-    c.setFont("Roboto-Bold", 10)
-    sub1 = "Treetino corp s.r.o."
-    sw1 = c.stringWidth(sub1, "Roboto-Bold", 10)
-    c.setFillColor(colors.HexColor("#000000"))
-    c.roundRect(W - sw1 - 60, H - 138, sw1 + 40, 20, 6, fill=1, stroke=0)
-    c.setFillColor(colors.white)
-    c.drawString(W - sw1 - 40, H - 132, sub1)
-    
-    # Date Box
-    sub2 = "Vystaveno: 02.02.2026"
-    sw2 = c.stringWidth(sub2, "Roboto-Bold", 10)
-    c.setFillColor(colors.HexColor("#000000"))
-    c.roundRect(W - sw2 - 60, H - 162, sw2 + 40, 20, 6, fill=1, stroke=0)
-    c.setFillColor(colors.white)
-    c.drawString(W - sw2 - 40, H - 156, sub2)
-    
-    # 3. Big Client Logo Or Client Name
-    client_logo_b64 = data.get("clientLogoBase64")
-    if client_logo_b64:
-        if "," in client_logo_b64:
-            client_logo_b64 = client_logo_b64.split(",")[1]
-        try:
-            image_data = base64.b64decode(client_logo_b64)
-            img_client = ImageReader(io.BytesIO(image_data))
-            cw, ch = img_client.getSize()
-            
-            scale = min(350.0 / float(cw), 250.0 / float(ch))
-            fin_w = cw * scale
-            fin_h = ch * scale
-            
-            c.drawImage(img_client, (W - fin_w) / 2.0, (H - 450) - (fin_h / 2.0), width=fin_w, height=fin_h, mask='auto')
-        except Exception as e:
-            print("Failed to decode logo:", e)
-    else:
-        c.setFillColor(colors.HexColor("#000000"))
-        client_name = data.get("clientName", "M - KOVO")
-        max_w = W - 100
-        font_size = 80
-        font_name = "Roboto-Bold"
+    # Dark overlay over the entire page to make text pop
+    c.saveState()
+    c.setFillColor(colors.black)
+    c.setFillAlpha(0.65)
+    c.rect(0, 0, W, H, fill=1, stroke=0)
+    c.restoreState()
         
-        from reportlab.lib.utils import simpleSplit
-        lines = simpleSplit(client_name, font_name, font_size, max_w)
-        
-        while font_size > 20:
-            lines = simpleSplit(client_name, font_name, font_size, max_w)
-            too_wide = any(c.stringWidth(ln, font_name, font_size) > max_w for ln in lines)
-            if len(lines) <= 2 and not too_wide:
-                break
-            font_size -= 4
+    # Extract data
+    location = data.get("location", {})
+    pins = location.get("pins", [])
+    unit_count = len(pins) if pins else 1
+    client_name = data.get("clientName", "M - KOVO").upper()
+    
+    # User explicitly requested 49 kWp for V1 tree
+    per_tree_power = 49
 
-        line_height = font_size * 1.15
-        total_h = (len(lines) - 1) * line_height
-        y_pos = (H - 450) + (total_h / 2.0)
-        
-        c.setFont(font_name, font_size)
-        for ln in lines:
-            c.drawCentredString(W / 2, y_pos, ln)
-            y_pos -= line_height
-    
-    # 4. Treetino Logo Bottom Center
-    logo_path = os.path.join(assets_path, "branding", "logo_color.png")
+    # 2. Top Logo and Text
+    logo_path = os.path.join(assets_path, "branding", "logo_horizontal.png")
     if not os.path.exists(logo_path):
-        logo_path = os.path.join(assets_path, "images", "logo.jpg")
+        logo_path = os.path.join(assets_path, "branding", "logo.png")
         
     if os.path.exists(logo_path):
-        img_treetino = utils.ImageReader(logo_path)
-        tr_w, tr_h = img_treetino.getSize()
-        
-        scale_tr = min(200.0 / float(tr_w), 80.0 / float(tr_h))
-        fin_tr_w = tr_w * scale_tr
-        fin_tr_h = tr_h * scale_tr
-        
-        c.drawImage(logo_path, (W - fin_tr_w) / 2.0, H - 700 - (fin_tr_h / 2.0), width=fin_tr_w, height=fin_tr_h, mask='auto')
+        img_logo = utils.ImageReader(logo_path)
+        lw, lh = img_logo.getSize()
+        scale_l = min(350.0 / float(lw), 70.0 / float(lh))
+        fin_lw = lw * scale_l
+        fin_lh = lh * scale_l
+        c.drawImage(logo_path, (W - fin_lw) / 2.0, H - 120, width=fin_lw, height=fin_lh, mask='auto')
     
-    # Page num
+    c.setFont("Roboto-Bold", 22)
+    c.setFillColor(colors.white)
+    c.drawCentredString(W / 2.0, H - 170, f"Strom s Výkonem {per_tree_power} kW")
+    
+    # 3. Bottom Translucent Gradient Overlay
+    overlay_height = 350
+    c.saveState()
     c.setFillColor(colors.black)
-    c.setFont("Roboto", 10)
-    c.drawCentredString(W / 2, 30, "1 z 8")
+    for i in range(overlay_height):
+        progress = i / float(overlay_height)
+        alpha = 0.95 * ((1.0 - progress) ** 1.5)
+        c.setFillAlpha(alpha)
+        c.rect(0, i, W, 1.5, fill=1, stroke=0)
+    c.restoreState()
+    
+    # 4. Text inside the overlay
+    c.setFillColor(colors.white)
+    c.setFont("Roboto-Bold", 20)
+    
+    line1 = "Cenová nabídka alternativního hybridního řešení o"
+    line2 = f"výkonu ({unit_count}x strom x {per_tree_power} kWp)"
+    
+    c.drawCentredString(W / 2.0, 180, line1)
+    c.drawCentredString(W / 2.0, 150, line2)
+    
+    # Wrap client name if it's too long
+    max_w = W - 100
+    font_size = 32
+    font_name = "Roboto-Bold"
+    from reportlab.lib.utils import simpleSplit
+    lines = simpleSplit(client_name, font_name, font_size, max_w)
+    while font_size > 16 and len(lines) > 2:
+        font_size -= 2
+        lines = simpleSplit(client_name, font_name, font_size, max_w)
+        
+    pro_y = 50 + (len(lines) * font_size * 1.2) + 10
+    
+    c.setFont("Roboto-Bold", 24)
+    c.drawCentredString(W / 2.0, pro_y, "Pro")
+        
+    c.setFont(font_name, font_size)
+    y_pos = pro_y - 40
+    for ln in lines:
+        c.drawCentredString(W / 2.0, y_pos, ln)
+        y_pos -= font_size * 1.2
+    
     c.showPage()
 
 
 def draw_page_2(c: canvas.Canvas, data: dict, assets_path: str):
     from reportlab.lib.utils import simpleSplit
-    result = data.get("result", {})
+    import os
+    import math
+    from reportlab.lib import colors
+    import reportlab.lib.utils as utils
+
+    # 1. Dark Background with subtle tree overlay
+    c.saveState()
+    c.setFillColor(colors.HexColor("#0f172a"))
+    c.rect(0, 0, W, H, fill=1, stroke=0)
     
-    c.setFont("Roboto-Bold", 14)
-    c.setFillColor(colors.HexColor("#1D4ED8"))
-    c.drawString(40, H - 50, "Strom V1")
-    c.setLineWidth(1)
-    c.setStrokeColor(colors.HexColor("#1D4ED8"))
-    c.line(40, H - 55, W - 40, H - 55)
-    
-    text = (
-        "Naše společnost se specializuje na vývoj a instalaci unikátních energetických infrastruktur v "
-        "podobě fotovoltaických stromů, které kombinují špičkový průmyslový design s maximální "
-        "efektivitou získávání energie z obnovitelných zdrojů. "
-        "Při realizaci klademe nekompromisní důraz na využití komponentů nejvyšší technologické "
-        "úrovně. Naše řešení využívá vlastní patentované technologie solárních listů a unikátních "
-        "transparentních větrných turbín, které jsou vyvíjeny s ohledem na dlouhou životnost a estetickou "
-        "integraci do urbanizovaného prostředí. "
-        "Díky úzkému propojení s akademickou sférou a předními technologickými institucemi nejsme "
-        "omezeni standardními parametry trhu. To nám umožňuje nabízet energetická řešení šitá na míru "
-        "specifickým lokalitám – od obchodních center až po moderní rezidenční čtvrti – s cílem "
-        "maximalizovat energetický výnos na minimální zastavěné ploše (již od 1 m2). "
-        "Náš tým tvoří zkušení inženýři a odborníci na obnovitelné zdroje a mechatroniku. Projekt "
-        "Treetino je realizován za finanční podpory programu Technologická inkubace a spolupracujeme "
-        "s předními institucemi a partnery, jako jsou CzechInvest, ČVUT, ČSOB, FZU a dalšími..."
-    )
-    
-    lines = simpleSplit(text, "Roboto", 9, W - 80)
-    y_pos = H - 80
-    c.setFont("Roboto", 9)
-    c.setFillColor(colors.black)
-    for line in lines:
-        c.drawString(40, y_pos, line)
-        y_pos -= 14
-    
-    main_tree_path = os.path.join(assets_path, "products", "strom1.png")
+    main_tree_path = os.path.join(assets_path, "products", "strom3.png")
     if os.path.exists(main_tree_path):
-        c.drawImage(main_tree_path, 40, y_pos - 240, width=W-80, height=220, preserveAspectRatio=True)
-        y_pos -= 260
+        img_cover = utils.ImageReader(main_tree_path)
+        img_w, img_h = img_cover.getSize()
+        
+        target_w = W * 1.5
+        target_h = (target_w / float(img_w)) * img_h
+        x_pos = (W - target_w) / 2.0
+        y_pos = (H - target_h) / 2.0
+        
+        c.drawImage(main_tree_path, x_pos, y_pos, width=target_w, height=target_h, mask='auto')
+        
+    # Dark overlay to make text pop
+    c.setFillColor(colors.HexColor("#000000"))
+    c.setFillAlpha(0.85)
+    c.rect(0, 0, W, H, fill=1, stroke=0)
+    c.restoreState()
 
-    c.setFont("Roboto", 9)
-    c.setFillColor(colors.black)
-    c.drawString(40, y_pos, f"V rámci přípravy indikativní cenové nabídky pro společnost {data.get('clientName', 'M - kovo s.r.o.')} jsme předběžně posoudili následující klíčové aspekty:")
-    y_pos -= 20
+    # 2. Top Logo (White)
+    logo_path = os.path.join(assets_path, "branding", "logo_horizontal.png")
+    if not os.path.exists(logo_path):
+        logo_path = os.path.join(assets_path, "branding", "logo.png")
+        
+    if os.path.exists(logo_path):
+        img_logo = utils.ImageReader(logo_path)
+        lw, lh = img_logo.getSize()
+        scale_l = min(200.0 / float(lw), 40.0 / float(lh))
+        fin_lw = lw * scale_l
+        fin_lh = lh * scale_l
+        c.drawImage(logo_path, 40, H - 60 - fin_lh/2.0, width=fin_lw, height=fin_lh, mask='auto')
+
+    # 3. Headers
+    y_pos = H - 120
+    c.setFont("Roboto-Bold", 18)
+    c.setFillColor(colors.white)
+    c.drawCentredString(W / 2.0, y_pos, "Řešení které Vám nabízíme")
     
-    bullets = [
-        "Technický stav plochy určené pro instalaci,",
-        "Vliv okolních objektů na zastínění panelů + turbín,",
-        "Požadavky na výkon a design systému,",
-        "Požadavky na požární bezpečnost,",
-        "Soulad s platnými legislativními podmínkami,",
-        "Získání příslušných dotací a vyřízení administrativních úkonů,"
+    y_pos -= 30
+    sub_text = (
+        "Treetino – technologicky nejpokročilejší autonomní elektrárnu na "
+        "trhu, která kombinuje solární a větrnou energii v designu "
+        "technologického stromu. Představuje přímou odpověď na rostoucí "
+        "ceny energií a zpřísňující se ESG legislativu."
+    )
+    c.setFont("Roboto-Bold", 12)
+    lines = simpleSplit(sub_text, "Roboto-Bold", 12, W - 100)
+    for line in lines:
+        c.drawCentredString(W / 2.0, y_pos, line)
+        y_pos -= 18
+
+    y_pos -= 20
+    c.setFont("Roboto-Bold", 16)
+    c.setFillColor(colors.HexColor("#00b4d8"))
+    c.drawCentredString(W / 2.0, y_pos, "4 klíčové schopnosti naší technologie")
+    
+    y_pos -= 40
+
+    # 4. Content Blocks
+    blocks = [
+        {
+            "title": "1) Extrémní prostorová efektivita (Úspora plochy)",
+            "text": "Realita: Klasická fotovoltaika vyžaduje rozsáhlé střechy nebo pozemky.\nŘešení Treetino: Zabere pouhý 1 m² na zemi, ale díky 3D architektuře koruny nahradí až 400 m² běžných solárních panelů. Má výkon až 49 kW (ideální pro napájení budov nebo firemního fleetu / EV nabíječek)."
+        },
+        {
+            "title": "2) Energetická stabilita 24/7 (Slunce + Vítr)",
+            "text": "Eliminujeme hlavní nevýhodu běžného soláru. Treetino kombinuje chytré solární listy s integrovanými tichými větrnými turbínami. Energii pro vaši firmu vyrábí ve dne, v noci, v zimě i při zhoršeném počasí."
+        },
+        {
+            "title": "3) Ochrana investice a AI optimalizace (Vyšší ROI)",
+            "text": "Vestavěná umělá inteligence (AI) aktivně natáčí listy za sluncem, což zvyšuje energetický výnos o 30 % oproti statickým systémům. V případě blížící se bouře nebo krupobití AI otočí automaticky FVE listy k zemi, čímž předchází škodám na majetku."
+        },
+        {
+            "title": "4) Hmatatelný důkaz vaší ESG strategie a PR (Reputační hodnota)",
+            "text": "Na rozdíl od panelů schovaných na střeše je Treetino umístěné před vaší centrálou nebo na firemním parkovišti. Je to nepřehlédnutelný vizuální symbol, který klientům, investorům i auditorům okamžitě demonstruje, že vaše firma je lídrem v inovacích a udržitelnosti."
+        }
     ]
-    for b in bullets:
-        c.drawString(50, y_pos, "• " + b)
-        y_pos -= 14
-
-    y_pos -= 20
-    c.drawString(40, y_pos, "V rámci přípravy cenové nabídky jsme provedli simulaci plánované instalace. Výsledná data z")
-    y_pos -= 14
-    c.drawString(40, y_pos, "těchto simulací jsou uvedena na následujících stránkách nabídky.")
     
-    # Page num
-    c.setFillColor(colors.black)
-    c.setFont("Roboto", 10)
+    content_width = W * 0.62
+    rx = W - 90
+    for i, b in enumerate(blocks):
+        block_start_y = y_pos
+        c.setFont("Roboto-Bold", 12)
+        c.setFillColor(colors.white)
+        c.drawString(40, y_pos, b["title"])
+        y_pos -= 18
+        
+        c.setFont("Roboto", 10)
+        c.setFillColor(colors.HexColor("#e2e8f0"))
+        
+        for paragraph in b["text"].split("\n"):
+            plines = simpleSplit(paragraph, "Roboto", 10, content_width)
+            for pln in plines:
+                c.drawString(40, y_pos, pln)
+                y_pos -= 14
+                
+        block_end_y = y_pos
+        block_center_y = (block_start_y + block_end_y) / 2.0
+        
+        # Dynamic Icons Alignment
+        icon_size = 40
+        if i == 0:
+            c.setFont("Roboto-Bold", 26)
+            c.setFillColor(colors.white)
+            c.drawCentredString(rx, block_center_y + 10, "49 kW")
+            c.drawCentredString(rx, block_center_y - 20, "1m²")
+            
+        elif i == 1:
+            sun_path = os.path.join(assets_path, "icons", "sun.png")
+            wind_path = os.path.join(assets_path, "icons", "wind.png")
+            if os.path.exists(sun_path) and os.path.exists(wind_path):
+                c.drawImage(sun_path, rx - icon_size/2.0, block_center_y, width=icon_size, height=icon_size, mask='auto')
+                c.drawImage(wind_path, rx - icon_size/2.0, block_center_y - icon_size + 10, width=icon_size, height=icon_size, mask='auto')
+            
+        elif i == 2:
+            cpu_path = os.path.join(assets_path, "icons", "cpu.png")
+            if os.path.exists(cpu_path):
+                c.drawImage(cpu_path, rx - (icon_size+10)/2.0, block_center_y - (icon_size+10)/2.0, width=icon_size+10, height=icon_size+10, mask='auto')
+                c.setFont("Roboto-Bold", 14)
+                c.setFillColor(colors.white)
+                c.drawCentredString(rx, block_center_y - 4, "AI")
+                
+        elif i == 3:
+            leaf_path = os.path.join(assets_path, "icons", "leaf.png")
+            if os.path.exists(leaf_path):
+                c.drawImage(leaf_path, rx - (icon_size+10)/2.0, block_center_y - (icon_size+10)/2.0, width=icon_size+10, height=icon_size+10, mask='auto')
+
+        y_pos -= 30
+
+    # Footer
+    c.setFont("Roboto", 8)
+    c.setFillColor(colors.HexColor("#94a3b8"))
+    c.drawString(40, 50, "Treetino corp s.r.o.")
+    c.drawString(40, 40, "IČ: 10800107")
+    c.drawString(40, 30, "DIČ: CZ10800107")
+    c.drawString(40, 20, "Vlčetin 62, Bílá 463 43")
+    
     c.drawCentredString(W / 2, 30, "2 z 8")
+    
     c.showPage()
 
 
@@ -212,344 +274,289 @@ def draw_page_3(c: canvas.Canvas, data: dict, assets_path: str):
     import reportlab.lib.utils as utils
     import os
     
-    result = data.get("result", {})
-    annualYield = result.get("annualSolarKwh", 0) + result.get("annualWindKwh", 0)
+    # 1. Background
+    main_tree_path = os.path.join(assets_path, "products", "strom2.png")
+    c.saveState()
+    c.setFillColor(colors.HexColor("#0f172a"))
+    c.rect(0, 0, W, H, fill=1, stroke=0)
     
-    c.setFillColor(colors.black)
-    c.setFont("Roboto-Bold", 10)
-    client_name = data.get("clientName", "M KOVO")
-    client_addr = data.get("clientAddress", "143, Rantířov, 588 41, Česká republika")
+    if os.path.exists(main_tree_path):
+        img_cover = utils.ImageReader(main_tree_path)
+        img_w, img_h = img_cover.getSize()
+        img_ratio = img_w / img_h
+        page_ratio = W / H
+        if img_ratio > page_ratio:
+            draw_h = H
+            draw_w = H * img_ratio
+        else:
+            draw_w = W
+            draw_h = W / img_ratio
+        
+        offset_x = (W - draw_w) / 2
+        offset_y = (H - draw_h) / 2
+        c.drawImage(main_tree_path, offset_x, offset_y, width=draw_w, height=draw_h, preserveAspectRatio=True)
     
-    c.drawString(40, H - 50, f"NABÍDKA {result.get('numberOfTurbines', 3)}X STROM V1 AREÁL {str(client_name).upper()}")
-    c.setFont("Roboto", 7)
-    c.setFillColor(colors.gray)
-    c.drawString(40, H - 65, f"{client_addr} | Tomáš Míčka | 2. 2. 2026")
+    # Heavier overlay for dashboard feel
+    c.setFillColor(colors.Color(0.06, 0.08, 0.12, alpha=0.92))
+    c.rect(0, 0, W, H, fill=1, stroke=0)
+    c.restoreState()
     
-    logo_path = os.path.join(assets_path, "branding", "logo.png")
+    # 2. Headers
+    logo_path = os.path.join(assets_path, "branding", "logo_horizontal.png")
+    if not os.path.exists(logo_path):
+        logo_path = os.path.join(assets_path, "branding", "logo.png")
+        
     if os.path.exists(logo_path):
-        import reportlab.lib.utils as utils
-        try:
-            # We want to place the logo precisely at the right margin (W - 40) aligned with the text header.
-            # Using anchor='c' usually centers around x,y. Let's just draw manually knowing standard dimensions.
-            img_reader = utils.ImageReader(logo_path)
-            iw, ih = img_reader.getSize()
-            aspect = ih / float(iw)
-            logo_w = 90
-            logo_h = logo_w * aspect
-            c.drawImage(logo_path, W - 40 - logo_w, H - 60, width=logo_w, height=logo_h, preserveAspectRatio=True, mask='auto')
-        except: pass
+        img_logo = utils.ImageReader(logo_path)
+        lw, lh = img_logo.getSize()
+        scale_l = min(150.0 / float(lw), 40.0 / float(lh))
+        fin_lw = lw * scale_l
+        fin_lh = lh * scale_l
+        c.drawImage(logo_path, 40, H - 60 - fin_lh/2.0, width=fin_lw, height=fin_lh, mask='auto')
 
-    map_w = W - 80
+    c.setFont("Roboto-Bold", 9)
+    c.setFillColor(colors.HexColor("#38bdf8")) # Accent blue
+    c.drawString(40, H - 100, "TECHNICKÁ ANALÝZA VÝKONU")
+    
+    c.setFont("Roboto-Bold", 24)
+    c.setFillColor(colors.white)
+    c.drawString(40, H - 130, "Simulace a návratnost pro")
+    c.setFillColor(colors.HexColor("#38bdf8"))
+    client_name = data.get("clientName", "NÁZEV FIRMY")
+    c.drawString(40 + c.stringWidth("Simulace a návratnost pro ", "Roboto-Bold", 24), H - 130, str(client_name))
+    
+    c.setFont("Roboto", 10)
+    c.setFillColor(colors.HexColor("#94a3b8"))
+    desc = "Pokročilá autonomní elektrárna kombinující solární a větrnou energii."
+    desc2 = "Přímá odpověď na rostoucí ceny energií a zpřísňující se ESG legislativu."
+    c.drawString(40, H - 150, desc)
+    c.drawString(40, H - 165, desc2)
+    
+    card_bg = colors.Color(0.12, 0.16, 0.23, alpha=0.8) # Slate 800 with opacity
+    card_radius = 8
+    
+    # 3. Map Card
+    map_w = 230
     map_h = 240
-    map_y = H - 320
+    map_x = 40
+    map_y = H - 430
     
-    c.setStrokeColor(colors.lightgrey)
-    c.setLineWidth(0.5)
-    c.rect(40, map_y, map_w, map_h, fill=0, stroke=1)
+    c.setFillColor(card_bg)
+    c.roundRect(map_x, map_y, map_w, map_h, card_radius, fill=1, stroke=0)
     
-    # Dynamic Map Composition
     try:
         location = data.get("location", {})
         pins = location.get("pins", [])
         if not pins and location.get("lat"):
             pins = [{"lat": location["lat"], "lng": location["lon"]}]
             
-        sw = 800
-        sh = int(800 * (map_h / map_w))
-
+        sw, sh = 500, 500
         if pins:
             center_lat = sum(p["lat"] for p in pins) / len(pins)
             center_lon = sum(p["lng"] for p in pins) / len(pins)
-            
-            if len(pins) > 1:
-                min_lat = min(p["lat"] for p in pins)
-                max_lat = max(p["lat"] for p in pins)
-                min_lon = min(p["lng"] for p in pins)
-                max_lon = max(p["lng"] for p in pins)
-                
-                lat_pad = max((max_lat - min_lat) * 0.3, 0.0005)
-                lon_pad = max((max_lon - min_lon) * 0.3, 0.0005)
-                
-                lon_diff = (max_lon - min_lon) + lon_pad * 2
-                
-                zoom_x = math.log((sw) / ((lon_diff / 360.0) * 512.0)) / math.log(2)
-                
-                rad_min = math.radians(min_lat - lat_pad)
-                rad_max = math.radians(max_lat + lat_pad)
-                merc_min = math.log(math.tan(rad_min/2 + math.pi/4))
-                merc_max = math.log(math.tan(rad_max/2 + math.pi/4))
-                
-                zoom_y = math.log((sh) / (((merc_max - merc_min) / (2 * math.pi)) * 512.0)) / math.log(2)
-                
-                zoom = min(zoom_x, zoom_y)
-                zoom = max(2.0, min(19.0, zoom))
-            else:
-                zoom = 18.0
+            zoom = 18.0
         else:
             center_lat, center_lon = 50.088, 14.42
             zoom = 18.0
-            
         
-        token = data.get("mapApiKey", "")
+        token = data.get("mapboxToken", "")
         if not token:
-            token = os.environ.get("VITE_GOOGLE_MAPS_API_KEY", "")
-                            
-        # Google Maps max size without premium is 640x640. We use scale=2 to get high-res (double pixels)
-        # sw=800, sh=something. Let's cap requested size to 640x640 while maintaining aspect.
-        req_w = min(640, sw)
-        req_h = min(640, sh)
-        url = f"https://maps.googleapis.com/maps/api/staticmap?center={center_lat},{center_lon}&zoom={int(zoom)}&size={req_w}x{req_h}&scale=2&maptype=satellite&key={token}"
+            token = os.environ.get("VITE_MAPBOX_TOKEN", "")
+            if not token:
+                env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".env")
+                if os.path.exists(env_path):
+                    with open(env_path, "r") as f:
+                        for line in f:
+                            if line.startswith("VITE_MAPBOX_TOKEN="):
+                                token = line.split("=", 1)[1].strip()
+                                break
+            
+        url = f"https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/{center_lon},{center_lat},{zoom},0/{sw}x{sh}@2x?access_token={token}"
         resp = requests.get(url, timeout=10)
         img = Image.open(io.BytesIO(resp.content)).convert("RGBA")
         
-        map_image_path = os.path.join(assets_path, "top_view.png")
+        # Add pins
+        map_image_path = os.path.join(assets_path, "products", "top_view.png")
+        if not os.path.exists(map_image_path): map_image_path = os.path.join(assets_path, "top_view.png")
         if os.path.exists(map_image_path):
             tree_icon = Image.open(map_image_path).convert("RGBA")
-            tree_size = 120 # Scale
+            tree_size = 120
             tree_icon = tree_icon.resize((tree_size, tree_size), Image.Resampling.LANCZOS)
-            
             def latlon_to_pixels(lon, lat, z):
                 n = 2.0 ** z
-                # Google Static Map uses 256px tile projection natively, but scale=2 doubles it to 512
                 x = (lon + 180.0) / 360.0 * n * 512
-                lat_rad = math.radians(lat)
-                y = (1.0 - math.log(math.tan(lat_rad) + (1.0 / math.cos(lat_rad))) / math.pi) / 2.0 * n * 512
+                y = (1.0 - math.log(math.tan(math.radians(lat)) + (1.0 / math.cos(math.radians(lat)))) / math.pi) / 2.0 * n * 512
                 return x, y
-            
-            cx, cy = latlon_to_pixels(center_lon, center_lat, zoom)
-            
+            mcx, mcy = latlon_to_pixels(center_lon, center_lat, zoom)
             from PIL import ImageDraw
-            
-            # Since scale=2 doubles output dimensions, the final image size is req_w*2 x req_h*2
-            final_img_w = req_w * 2
-            final_img_h = req_h * 2
-            
             for p in pins:
                 px, py = latlon_to_pixels(p["lng"], p["lat"], zoom)
-                # Position relative to center pixel
-                ix = int(final_img_w / 2 + (px - cx)) - tree_size // 2
-                iy = int(final_img_h / 2 + (py - cy)) - tree_size // 2
-                
-                # Draw neon circle behind tree to pop
+                ix = int(sw + (px - mcx) * 2) - tree_size // 2
+                iy = int(sh + (py - mcy) * 2) - tree_size // 2
                 draw = ImageDraw.Draw(img)
-                pad = 8
-                draw.ellipse([ix - pad, iy - pad, ix + tree_size + pad, iy + tree_size + pad], outline="#a3e635", width=6)
-                
+                draw.ellipse([ix - 4, iy - 4, ix + tree_size + 4, iy + tree_size + 4], outline="#38bdf8", width=4)
                 img.paste(tree_icon, (ix, iy), tree_icon)
         
         final_io = io.BytesIO()
         img.convert("RGB").save(final_io, format="JPEG", quality=90)
         final_io.seek(0)
-        c.drawImage(utils.ImageReader(final_io), 40, map_y, width=map_w, height=map_h, preserveAspectRatio=False)
+        
+        c.saveState()
+        path = c.beginPath()
+        path.roundRect(map_x, map_y, map_w, map_h, card_radius)
+        c.clipPath(path, stroke=0, fill=0)
+        c.drawImage(utils.ImageReader(final_io), map_x, map_y, width=map_w, height=map_h, preserveAspectRatio=False)
+        c.restoreState()
     except Exception as e:
-        print("Map generation failed:", e)
-        # fallback simple rect
-        c.setFillColor(colors.HexColor("#4a5c40"))
-        c.rect(40, map_y, map_w, map_h, fill=1, stroke=0)
-    
-    # Results block
-    c.setFillColor(colors.HexColor("#64748b")) # slate text
-    c.setFont("Roboto-Bold", 10)
-    c.drawString(50, H - 345, "VÝSLEDKY SIMULACE")
-    
-    c.setStrokeColor(colors.HexColor("#e2e8f0"))
-    c.setLineWidth(1)
-    
-    c.rect(40, H - 440, map_w, 120, fill=0, stroke=1)
-    c.line(40, H - 355, W - 40, H - 355)
-    
-    dcPower = "{:.2f}".format(result.get("dcPowerKw", 147.0)).replace(".", ",")
-    acPower = "{:.2f}".format(result.get("acPowerKw", 133.31)).replace(".", ",")
-    production = "{:.2f}".format(annualYield / 1000).replace(".", ",")
-    co2 = "{:.2f}".format(result.get("co2Savings", 73.78)).replace(".", ",")
-    trees = "{:,}".format(result.get("treesEquivalent", 3388)).replace(",", " ")
-    
-    stats = [
-        ("Instalovaný DC Výkon", f"{dcPower} kWp"),
-        ("Max Dosažitelný AC Výkon", f"{acPower} kW"),
-        ("Roční Výroba Energie", f"{production} MWh"),
-        ("Úspora Emisí CO2 (Roční)", f"{co2} t"),
-        ("Ekvivalent Vysazených", f"{trees} Stromů")
-    ]
-    x_offset = 40
-    step = (W - 80) / 5
-    for i, (label, val) in enumerate(stats):
-        icx, icy = x_offset + i*step + step/2, H - 373
-        c.setStrokeColor(colors.HexColor("#334155"))
-        c.setLineWidth(1.2)
-        
-        if i == 0:
-            c.circle(icx, icy, 5, fill=0, stroke=1)
-            for angle in [0, 45, 90, 135, 180, 225, 270, 315]:
-                rad = math.radians(angle)
-                c.line(icx + 7*math.cos(rad), icy + 7*math.sin(rad), icx + 10*math.cos(rad), icy + 10*math.sin(rad))
-        elif i == 1:
-            c.circle(icx, icy, 8, fill=0, stroke=1)
-            c.circle(icx, icy, 0.5, fill=1, stroke=0)
-            c.line(icx, icy, icx + 4, icy + 4)
-            c.line(icx - 5, icy - 5, icx - 3, icy - 3)
-        elif i == 2:
-            c.rect(icx - 8, icy - 8, 16, 16, fill=0, stroke=1)
-            c.line(icx - 8, icy + 3, icx + 8, icy + 3)
-            for rx in [-4, 4]:
-                c.circle(rx + icx, icy - 2, 0.5, fill=1, stroke=0)
-                c.circle(rx + icx, icy - 5, 0.5, fill=1, stroke=0)
-        elif i == 3:
-            path = c.beginPath()
-            path.moveTo(icx - 8, icy - 2)
-            path.curveTo(icx - 10, icy + 4, icx - 4, icy + 10, icx, icy + 6)
-            path.curveTo(icx + 4, icy + 10, icx + 10, icy + 4, icx + 8, icy - 2)
-            path.curveTo(icx + 12, icy - 6, icx + 6, icy - 10, icx, icy - 8)
-            path.curveTo(icx - 6, icy - 10, icx - 12, icy - 6, icx - 8, icy - 2)
-            c.drawPath(path, stroke=1, fill=0)
-            c.setFont("Roboto-Bold", 4.5)
-            c.setFillColor(colors.HexColor("#334155"))
-            c.drawCentredString(icx, icy-1, "CO2")
-        elif i == 4:
-            path = c.beginPath()
-            path.moveTo(icx - 5, icy - 5)
-            path.curveTo(icx - 8, icy + 2, icx - 2, icy + 8, icx + 5, icy + 5)
-            path.curveTo(icx + 8, icy - 2, icx + 2, icy - 8, icx - 5, icy - 5)
-            c.drawPath(path, stroke=1, fill=0)
-            c.line(icx - 5, icy - 5, icx, icy)
-            
-        c.setFont("Roboto-Bold", 6.5)
-        c.setFillColor(colors.HexColor("#64748b"))
-        if len(label) > 20:
-            words = label.split()
-            c.drawCentredString(icx, icy - 20, " ".join(words[:2]))
-            c.drawCentredString(icx, icy - 28, " ".join(words[2:]))
-        else:
-            c.drawCentredString(icx, icy - 24, label)
-            
-        c.setFont("Roboto", 11)
-        c.setFillColor(colors.black)
-        # Using string splitting to emphasize the unit if it has one
-        val_parts = val.split(" ")
-        unit = val_parts[-1] if len(val_parts) > 1 else ""
-        num = " ".join(val_parts[:-1]) if len(val_parts) > 1 else val
-        c.drawCentredString(icx - 5, icy - 45, num)
-        c.setFont("Roboto", 7)
-        c.setFillColor(colors.HexColor("#64748b"))
-        c.drawString(icx - 3 + c.stringWidth(num, "Roboto", 11)/2, icy - 45, unit)
-        
-    c.setStrokeColor(colors.HexColor("#e2e8f0"))
-    c.rect(40, H - 585, map_w, 130, fill=0, stroke=1)
-    
-    # ------------------ 1. HORIZONTAL BARS (Moved back to Page 3) ------------------ #
+        print("Map error:", e)
+
+    # DATA
     result = data.get("result", {})
     annualYield = (result.get("annualSolarKwh", 0) + result.get("annualWindKwh", 0))
-
-    consumption_override = data.get("consumptionOverride", None)
-    if consumption_override is not None:
-        spotreba_amount = consumption_override
-    else:
+    spotreba_amount = data.get("consumptionOverride")
+    if spotreba_amount is None:
         spotreba_amount = result.get("buildingConsumption", 360.0)
-
     monthly = result.get("monthlyData", [])
-    total_consumed_from_solar = 0
-    total_production = 0
     
+    # 4. Production Graph Card
+    prod_x = 290
+    prod_y = H - 430
+    prod_w = W - 330
+    prod_h = 240
+    
+    c.setFillColor(card_bg)
+    c.roundRect(prod_x, prod_y, prod_w, prod_h, card_radius, fill=1, stroke=0)
+    
+    c.setFont("Roboto-Bold", 12)
+    c.setFillColor(colors.white)
+    c.drawString(prod_x + 20, prod_y + prod_h - 25, "Odhadovaná energie za měsíc")
+    
+    c.setFont("Roboto", 7)
+    c.setFillColor(colors.HexColor("#94a3b8"))
+    c.drawRightString(prod_x + prod_w - 20, prod_y + prod_h - 25, "MWh / Měsíc")
+    
+    # Chart logic
+    chart_x = prod_x + 20
+    chart_w = prod_w - 40
+    chart_y = prod_y + 30
+    chart_h = prod_h - 75
+    
+    max_val_mwh = 0
     for m in monthly:
-        sol_mwh = m.get("solar", 0) / 1000.0
-        wind_mwh = m.get("wind", 0) / 1000.0
+        s = m.get("solar", 0)/1000.0
+        w = m.get("wind", 0)/1000.0
+        cons = spotreba_amount / 12.0
+        if (s+w) > max_val_mwh: max_val_mwh = s+w
+        if cons > max_val_mwh: max_val_mwh = cons
+    if max_val_mwh <= 0: max_val_mwh = 1
+    max_val_rounded = int(math.ceil(max_val_mwh / 5.0) * 5)
+    if max_val_rounded == 0: max_val_rounded = 5
+    
+    group_w = chart_w / 12.0
+    bar_w = 12 
+    
+    for i, m in enumerate(monthly):
+        s_mwh = m.get("solar", 0)/1000.0
+        w_mwh = m.get("wind", 0)/1000.0
         cons_mwh = spotreba_amount / 12.0
+        prod_total = s_mwh + w_mwh
         
-        prod_mwh = sol_mwh + wind_mwh
-        total_production += prod_mwh
+        prod_h_px = (prod_total / max_val_rounded) * chart_h
+        cons_h_px = (cons_mwh / max_val_rounded) * chart_h
         
-        local_used = min(prod_mwh, cons_mwh)
-        total_consumed_from_solar += local_used
+        bx = chart_x + i * group_w + (group_w - bar_w) / 2.0
+        
+        # Consumption background bar (Grid used)
+        c.setFillColor(colors.HexColor("#334155"))
+        c.roundRect(bx, chart_y, bar_w, cons_h_px, 2, fill=1, stroke=0)
+        
+        # Production foreground bar (Cyan)
+        c.setFillColor(colors.HexColor("#0ea5e9")) # Bright cyan/blue
+        c.roundRect(bx, chart_y, bar_w, prod_h_px, 2, fill=1, stroke=0)
+        
+        # X Axis labels
+        c.setFillColor(colors.HexColor("#94a3b8"))
+        c.setFont("Roboto-Bold", 6)
+        months = ["LED", "ÚNO", "BŘE", "DUB", "KVĚ", "ČVN", "ČVC", "SRP", "ZÁŘ", "ŘÍJ", "LIS", "PRO"]
+        if i % 3 == 0:
+            if i < len(months):
+                c.drawCentredString(bx + bar_w/2, chart_y - 10, months[i])
 
-    vyroba_mwh = "{:.2f}".format(total_production).replace(".", ",")
-    spotreba_mwh = "{:.2f}".format(spotreba_amount).replace(".", ",")
+    # 5. System Loss Diagram Card
+    loss_x = 40
+    loss_y = H - 760
+    loss_w = W - 80
+    loss_h = 310
     
-    do_budovy_val = total_consumed_from_solar
-    do_site_val = total_production - total_consumed_from_solar
+    c.setFillColor(card_bg)
+    c.roundRect(loss_x, loss_y, loss_w, loss_h, card_radius, fill=1, stroke=0)
     
-    z_sol_val = total_consumed_from_solar
-    z_site_val = spotreba_amount - total_consumed_from_solar
+    c.setFont("Roboto-Bold", 12)
+    c.setFillColor(colors.white)
+    c.drawString(loss_x + 20, loss_y + loss_h - 25, "Diagram ztrát systému")
     
-    do_budovy = "{:.2f}".format(do_budovy_val).replace(".", ",")
-    do_site = "{:.2f}".format(do_site_val).replace(".", ",")
+    c.setStrokeColor(colors.HexColor("#334155"))
+    c.line(loss_x + 20, loss_y + loss_h - 35, loss_x + loss_w - 20, loss_y + loss_h - 35)
     
-    z_sol_mwh = "{:.2f}".format(z_sol_val).replace(".", ",")
-    z_site_mwh = "{:.2f}".format(z_site_val).replace(".", ",")
-
-    vyroba_pct = int((do_budovy_val / total_production * 100)) if total_production > 0 else 0
-    spotreba_pct = int((z_sol_val / spotreba_amount * 100)) if spotreba_amount > 0 else 0
+    vyroba_mwh_str = "{:.2f}".format(annualYield / 1000.0).replace(".", ",")
+    items = [
+        ("Globální záření na horizontální rovinu", "1,16 MWh/m²", 100, "+1.78%", True),
+        ("Ztráta osvitu zastíněním", "-4,88%", 95, None, False),
+        ("Energie po FV konverzi", "158,38 MWh", 95, None, True),
+        ("Elektrické ztráty zastíněním", "-3,67%", 91, None, False),
+        ("Ohmické ztráty na vedení DC", "-0,57%", 91, None, False),
+        ("Ztráta - účinnost střídače", "-2,28%", 89, None, False),
+        ("Vyrobená energie celkem", f"{vyroba_mwh_str} MWh", 89, None, True)
+    ]
+    
+    start_y = loss_y + loss_h - 65
+    row_h = 34
+    bar_track_h = 6
+    
+    for i, (label, val, pct, extra, is_main) in enumerate(items):
+        cy = start_y - i * row_h
+        
+        c.setFont("Roboto-Bold" if is_main else "Roboto", 8)
+        c.setFillColor(colors.white if is_main else colors.HexColor("#94a3b8"))
+        c.drawString(loss_x + 20, cy, label)
+        
+        c.setFont("Roboto-Bold" if is_main else "Roboto", 8)
+        c.setFillColor(colors.HexColor("#38bdf8") if is_main else colors.HexColor("#fda4af"))
+        c.drawRightString(loss_x + loss_w - 20, cy, val)
+        
+        if is_main:
+            c.setFillColor(colors.HexColor("#0f172a"))
+            c.roundRect(loss_x + 20, cy - 10, loss_w - 40, bar_track_h, 3, fill=1, stroke=0)
+            fill_w = (loss_w - 40) * (pct / 100.0)
+            c.setFillColor(colors.HexColor("#38bdf8"))
+            c.roundRect(loss_x + 20, cy - 10, fill_w, bar_track_h, 3, fill=1, stroke=0)
+        else:
+            c.setFillColor(colors.HexColor("#fda4af"))
+            c.roundRect(loss_x + loss_w - 40, cy - 10, 20, bar_track_h, 3, fill=1, stroke=0)
+            
+    c.setStrokeColor(colors.HexColor("#334155"))
+    c.line(loss_x + 20, loss_y + 35, loss_x + loss_w - 20, loss_y + 35)
     
     c.setFont("Roboto-Bold", 10)
-    c.setFillColor(colors.HexColor("#64748b"))
-    c.drawString(50, H - 475, "VÝSLEDKY ROČNÍ SPOTŘEBY A VÝROBY")
-    
-    c.setFont("Roboto-Bold", 8)
-    c.setFillColor(colors.black)
-    c.drawString(50, H - 515, "Výroba")
-    c.setFont("Roboto-Bold", 12)
-    c.drawString(100, H - 515, f"{vyroba_mwh}")
+    c.setFillColor(colors.white)
+    c.drawString(loss_x + 20, loss_y + 15, "Vyrobená energie celkem")
+    c.setFillColor(colors.HexColor("#38bdf8"))
+    c.drawRightString(loss_x + loss_w - 20, loss_y + 15, f"{vyroba_mwh_str} MWh")
+
+    # 6. Meteorological Station info
+    c.setFont("Roboto", 8)
+    c.setFillColor(colors.HexColor("#94a3b8"))
+    c.drawCentredString(W/2, 60, "Stanice: Kostelní Myslová (25 km daleko), Zdroj: Meteonorm 8.2")
+
+    # Footer
     c.setFont("Roboto", 8)
     c.setFillColor(colors.HexColor("#64748b"))
-    c.drawString(100 + c.stringWidth(vyroba_mwh, "Roboto-Bold", 12) + 2, H - 515, "MWh")
+    c.drawString(40, 50, "Treetino corp s.r.o.")
+    c.drawString(40, 40, "IČ: 10800107")
+    c.drawString(40, 30, "DIČ: CZ10800107")
+    c.drawString(40, 20, "Vlčetin 62, Bílá 463 43")
     
-    c.setFillColor(colors.HexColor("#00ff99"))
-    c.roundRect(170, H - 520, 140, 15, 7.5, fill=1, stroke=0)
-    c.setFillColor(colors.white)
-    c.setFont("Roboto-Bold", 8)
-    c.drawCentredString(240, H - 516, f"{vyroba_pct}%")
-    
-    c.setFillColor(colors.HexColor("#6ee7b7"))
-    c.circle(385, H - 508, 2, fill=1, stroke=0)
-    c.setFillColor(colors.HexColor("#64748b"))
-    c.setFont("Roboto", 6)
-    c.drawString(392, H - 510, f"Do budovy {do_budovy} MWh ({vyroba_pct}%)")
-    
-    c.setFillColor(colors.HexColor("#10b981"))
-    c.circle(385, H - 518, 2, fill=1, stroke=0)
-    c.drawString(392, H - 520, f"Využití přes kapacitu (do sítě) {do_site} MWh")
-
-    c.setStrokeColor(colors.HexColor("#f1f5f9"))
-    c.setLineWidth(1)
-    c.line(50, H - 535, W - 50, H - 535)
-
-    c.setFillColor(colors.black)
-    c.setFont("Roboto-Bold", 8)
-    c.drawString(50, H - 555, "Spotřeba")
-    c.setFont("Roboto-Bold", 12)
-    c.drawString(100, H - 555, f"{spotreba_mwh}")
-    c.setFont("Roboto", 8)
-    c.setFillColor(colors.HexColor("#64748b"))
-    c.drawString(100 + c.stringWidth(spotreba_mwh, "Roboto-Bold", 12) + 2, H - 555, "MWh")
-    
-    c.setFillColor(colors.HexColor("#fbbf24"))
-    c.roundRect(170, H - 560, 140, 15, 7.5, fill=1, stroke=0)
-    c.setFillColor(colors.HexColor("#60a5fa"))
-    w_blue = min(140.0, max(15.0, (spotreba_pct/100.0) * 140.0))
-    c.roundRect(170, H - 560, w_blue, 15, 7.5, fill=1, stroke=0)
-    if w_blue < 140:
-        c.rect(170 + 7.5, H - 560, w_blue - 7.5, 15, fill=1, stroke=0)
-
-    c.setFillColor(colors.white)
-    c.setFont("Roboto-Bold", 8)
-    if spotreba_pct > 10:
-        c.drawCentredString(170 + (w_blue/2), H - 556, f"{spotreba_pct}%")
-    if spotreba_pct < 90:
-        c.drawCentredString(170 + w_blue + ((140-w_blue)/2), H - 556, f"{100-spotreba_pct}%")
-    
-    c.setFillColor(colors.HexColor("#60a5fa"))
-    c.circle(385, H - 548, 2, fill=1, stroke=0)
-    c.setFillColor(colors.HexColor("#64748b"))
-    c.setFont("Roboto", 6)
-    c.drawString(392, H - 550, f"Z vlastní výroby {z_sol_mwh} MWh ({spotreba_pct}%)")
-    
-    c.setFillColor(colors.HexColor("#fbbf24"))
-    c.circle(385, H - 558, 2, fill=1, stroke=0)
-    c.drawString(392, H - 560, f"Ze sítě {z_site_mwh} MWh ({100-spotreba_pct}%)")
-    
-    # Page num
-    c.setFillColor(colors.black)
-    c.setFont("Roboto", 10)
-    c.drawCentredString(W / 2, 30, "3 z 8")
+    c.drawCentredString(W / 2, 30, "3 z 6")
     c.showPage()
 
 
@@ -778,7 +785,12 @@ def draw_page_5(c: canvas.Canvas, data: dict, assets_path: str):
         
     c.setFont("Roboto-Bold", 14)
     c.setFillColor(colors.HexColor("#64748b"))
-    c.drawString(60, H - 55, "NABÍDKA 3X STROM V1 AREÁL M KOVO")
+    location = data.get("location", {})
+    pins = location.get("pins", [])
+    unit_count = len(pins) if pins else 1
+    client_name = data.get("clientName", "M KOVO")
+    
+    c.drawString(60, H - 55, f"NABÍDKA {unit_count}X STROM V1 AREÁL {str(client_name).upper()}")
     
     c.setFont("Roboto", 9)
     c.setFillColor(colors.HexColor("#64748b"))
@@ -1201,7 +1213,7 @@ def draw_page_6(c: canvas.Canvas, data: dict, assets_path: str):
     # Page num
     c.setFillColor(colors.black)
     c.setFont("Roboto", 10)
-    c.drawCentredString(W / 2, 30, "6 z 8")
+    c.drawCentredString(W / 2, 30, "4 z 6")
     c.showPage()
 
 
@@ -1338,7 +1350,7 @@ def draw_page_7(c: canvas.Canvas, data: dict, assets_path: str):
     # Page num
     c.setFillColor(colors.black)
     c.setFont("Roboto", 10)
-    c.drawCentredString(W / 2, 30, "7 z 8")
+    c.drawCentredString(W / 2, 30, "5 z 6")
     c.showPage()
 
 
@@ -1391,7 +1403,7 @@ def draw_page_8(c: canvas.Canvas, data: dict, assets_path: str):
     # Page num
     c.setFillColor(colors.black)
     c.setFont("Roboto", 10)
-    c.drawCentredString(W / 2, 30, "8 z 8")
+    c.drawCentredString(W / 2, 30, "6 z 6")
     c.showPage()
 
 
@@ -1415,11 +1427,10 @@ def generate_pdf(data: dict) -> bytes:
     
     draw_page_1(c, data, assets_path)  # Cover
     draw_page_2(c, data, assets_path)  # Product
-    draw_page_4(c, data, assets_path)  # Analytics 1
-    draw_page_5(c, data, assets_path)  # Analytics 2
-    draw_page_3(c, data, assets_path)  # Map
+    draw_page_3(c, data, assets_path)  # Map & Analytics
     draw_page_6(c, data, assets_path)  # Pricing
-    draw_page_7(c, data, assets_path)  # Contact / Upsell
+    draw_page_7(c, data, assets_path)  # Tech Specs
+    draw_page_8(c, data, assets_path)  # Outro
     
     c.save()
     pdf_bytes = buffer.getvalue()
