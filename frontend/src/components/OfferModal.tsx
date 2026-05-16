@@ -66,6 +66,7 @@ export default function OfferModal({ result, location, energyCost, web3Enabled, 
     const [clientLogoBase64, setClientLogoBase64] = useState<string | null>(null);
     const [consumptionValue, setConsumptionValue] = useState<number>(result.buildingConsumption);
     const [consumptionUnit, setConsumptionUnit] = useState<'kWh' | 'MWh' | 'GWh'>('MWh');
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const [isGenerating, setIsGenerating] = useState(false);
     const [ico, setIco] = useState('');
     const [isFetchingIco, setIsFetchingIco] = useState(false);
@@ -73,13 +74,13 @@ export default function OfferModal({ result, location, energyCost, web3Enabled, 
     const handleIcoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const newVal = e.target.value.replace(/\D/g, '');
         setIco(newVal);
-        
+
         // Clear old results if they start modifying a full IČO
         if (newVal.length > 0 && newVal.length < 8) {
             setClientName('');
             setClientAddress('');
         }
-        
+
         // Exact 8-digit IČO search
         if (newVal.length === 8) {
             setIsFetchingIco(true);
@@ -88,12 +89,12 @@ export default function OfferModal({ result, location, energyCost, web3Enabled, 
                 if (response.ok) {
                     const data = await response.json();
                     if (data.obchodniJmeno) setClientName(data.obchodniJmeno);
-                    
+
                     let bestAddress = data.sidlo?.textovaAdresa;
                     if (data.dalsiUdaje && Array.isArray(data.dalsiUdaje)) {
                         const resData = data.dalsiUdaje.find((d: any) => d.datovyZdroj === 'res');
                         const rzpData = data.dalsiUdaje.find((d: any) => d.datovyZdroj === 'rzp');
-                        
+
                         if (resData?.sidlo?.[0]?.sidlo?.textovaAdresa) {
                             bestAddress = resData.sidlo[0].sidlo.textovaAdresa;
                         } else if (rzpData?.sidlo?.[0]?.sidlo?.textovaAdresa) {
@@ -126,6 +127,13 @@ export default function OfferModal({ result, location, energyCost, web3Enabled, 
         }
     };
 
+    const clearLogo = () => {
+        setClientLogoBase64(null);
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+    };
+
     const handleGeneratePdf = async () => {
         setIsGenerating(true);
         let finalOverride = consumptionValue;
@@ -145,7 +153,8 @@ export default function OfferModal({ result, location, energyCost, web3Enabled, 
                     web3Enabled,
                     esgEnabled,
                     clientLogoBase64,
-                    consumptionOverride: finalOverride
+                    consumptionOverride: finalOverride,
+                    mapApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY
                 })
             });
 
@@ -244,7 +253,7 @@ export default function OfferModal({ result, location, energyCost, web3Enabled, 
                                 <Shield className="w-5 h-5 text-treetino-light" />
                             </div>
                             <div className="space-y-1">
-                                <h4 className="text-sm font-semibold text-white">Garance Výkonu</h4>
+                                <h4 className="text-sm font-semibold text-white">Predikce Výkonu</h4>
                                 <p className="text-xs text-slate-400 leading-relaxed">
                                     Tato nabídka vychází z vysoce přesných dat z environmentálního skenování. Energetické stromy standardně zahrnují 25letou záruku na konstrukci a optimalizaci výnosu řízenou AI.
                                 </p>
@@ -262,19 +271,19 @@ export default function OfferModal({ result, location, energyCost, web3Enabled, 
                                 const activePins = location.pins && location.pins.length > 0
                                     ? location.pins
                                     : [{ lat: location.lat, lng: location.lon }];
-                                    
+
                                 let bounds: [number, number, number, number] | undefined = undefined;
                                 if (activePins.length > 1) {
                                     const minLng = Math.min(...activePins.map(p => p.lng));
                                     const maxLng = Math.max(...activePins.map(p => p.lng));
                                     const minLat = Math.min(...activePins.map(p => p.lat));
                                     const maxLat = Math.max(...activePins.map(p => p.lat));
-                                    
+
                                     const lngPad = Math.max((maxLng - minLng) * 0.3, 0.0005);
                                     const latPad = Math.max((maxLat - minLat) * 0.3, 0.0005);
                                     bounds = [minLng - lngPad, minLat - latPad, maxLng + lngPad, maxLat + latPad];
                                 }
-                                
+
                                 return (
                                     <APIProvider apiKey={GOOGLE_MAPS_API_KEY} libraries={['marker', 'maps3d', 'places']} version="alpha">
                                         <Map
@@ -347,7 +356,7 @@ export default function OfferModal({ result, location, energyCost, web3Enabled, 
                                 onChange={(e) => setConsumptionValue(parseFloat(e.target.value) || 0)}
                                 className="w-full bg-transparent px-3 py-2 text-white text-sm outline-none"
                             />
-                            <button 
+                            <button
                                 onClick={() => {
                                     if (consumptionUnit === 'MWh') {
                                         setConsumptionUnit('GWh');
@@ -372,12 +381,26 @@ export default function OfferModal({ result, location, energyCost, web3Enabled, 
                         </label>
                         <div className="relative">
                             <input
+                                ref={fileInputRef}
                                 type="file"
                                 accept="image/*"
                                 onChange={handleLogoUpload}
                                 className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-white text-sm focus:border-treetino-light outline-none file:mr-4 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-[10px] file:font-semibold file:bg-treetino-light/10 file:text-treetino-light hover:file:bg-treetino-light/20 cursor-pointer"
                             />
-                            {clientLogoBase64 && <div className="absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 rounded border border-slate-700 bg-slate-800 overflow-hidden p-1 shadow-sm"><img src={clientLogoBase64} alt="Logo" className="w-full h-full object-contain" /></div>}
+                            {clientLogoBase64 && (
+                                <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                                    <div className="w-8 h-8 rounded border border-slate-700 bg-slate-800 overflow-hidden p-1 shadow-sm">
+                                        <img src={clientLogoBase64} alt="Logo" className="w-full h-full object-contain" />
+                                    </div>
+                                    <button 
+                                        onClick={clearLogo}
+                                        className="w-6 h-6 flex items-center justify-center rounded-full bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors"
+                                        title="Odstranit logo"
+                                    >
+                                        <X className="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -395,8 +418,8 @@ export default function OfferModal({ result, location, energyCost, web3Enabled, 
                     >
                         {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
                         <span className="font-medium text-sm">
-                            {location.pins.some(p => p.type !== 'main-tree') 
-                                ? 'Pouze pro V1 Strom' 
+                            {location.pins.some(p => p.type !== 'main-tree')
+                                ? 'Pouze pro V1 Strom'
                                 : (isGenerating ? 'Generuji...' : 'Generovat PDF Nabídku')}
                         </span>
                     </button>

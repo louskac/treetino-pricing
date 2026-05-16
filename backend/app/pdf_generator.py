@@ -282,7 +282,7 @@ def draw_page_3(c: canvas.Canvas, data: dict, assets_path: str):
                 zoom_y = math.log((sh) / (((merc_max - merc_min) / (2 * math.pi)) * 512.0)) / math.log(2)
                 
                 zoom = min(zoom_x, zoom_y)
-                zoom = max(15.0, min(19.0, zoom))
+                zoom = max(2.0, min(19.0, zoom))
             else:
                 zoom = 18.0
         else:
@@ -290,17 +290,15 @@ def draw_page_3(c: canvas.Canvas, data: dict, assets_path: str):
             zoom = 18.0
             
         
-        token = os.environ.get("VITE_MAPBOX_TOKEN", "")
+        token = data.get("mapApiKey", "")
         if not token:
-            env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".env")
-            if os.path.exists(env_path):
-                with open(env_path, "r") as f:
-                    for line in f:
-                        if line.startswith("VITE_MAPBOX_TOKEN="):
-                            token = line.split("=", 1)[1].strip()
-                            break
+            token = os.environ.get("VITE_GOOGLE_MAPS_API_KEY", "")
                             
-        url = f"https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/{center_lon},{center_lat},{zoom},0/{sw}x{sh}@2x?access_token={token}"
+        # Google Maps max size without premium is 640x640. We use scale=2 to get high-res (double pixels)
+        # sw=800, sh=something. Let's cap requested size to 640x640 while maintaining aspect.
+        req_w = min(640, sw)
+        req_h = min(640, sh)
+        url = f"https://maps.googleapis.com/maps/api/staticmap?center={center_lat},{center_lon}&zoom={int(zoom)}&size={req_w}x{req_h}&scale=2&maptype=satellite&key={token}"
         resp = requests.get(url, timeout=10)
         img = Image.open(io.BytesIO(resp.content)).convert("RGBA")
         
@@ -312,6 +310,7 @@ def draw_page_3(c: canvas.Canvas, data: dict, assets_path: str):
             
             def latlon_to_pixels(lon, lat, z):
                 n = 2.0 ** z
+                # Google Static Map uses 256px tile projection natively, but scale=2 doubles it to 512
                 x = (lon + 180.0) / 360.0 * n * 512
                 lat_rad = math.radians(lat)
                 y = (1.0 - math.log(math.tan(lat_rad) + (1.0 / math.cos(lat_rad))) / math.pi) / 2.0 * n * 512
@@ -321,10 +320,15 @@ def draw_page_3(c: canvas.Canvas, data: dict, assets_path: str):
             
             from PIL import ImageDraw
             
+            # Since scale=2 doubles output dimensions, the final image size is req_w*2 x req_h*2
+            final_img_w = req_w * 2
+            final_img_h = req_h * 2
+            
             for p in pins:
                 px, py = latlon_to_pixels(p["lng"], p["lat"], zoom)
-                ix = int(sw + (px - cx) * 2) - tree_size // 2
-                iy = int(sh + (py - cy) * 2) - tree_size // 2
+                # Position relative to center pixel
+                ix = int(final_img_w / 2 + (px - cx)) - tree_size // 2
+                iy = int(final_img_h / 2 + (py - cy)) - tree_size // 2
                 
                 # Draw neon circle behind tree to pop
                 draw = ImageDraw.Draw(img)
