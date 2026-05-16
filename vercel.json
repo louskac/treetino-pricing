@@ -5,10 +5,7 @@
     "framework": "vite",
     "functions": {
         "api/**": {
-            "includeFiles": [
-                "backend/app/fonts/**",
-                "frontend/public/**"
-            ]
+            "includeFiles": "{backend/app/fonts/**,frontend/public/**}"
         }
     },
     "rewrites": [
