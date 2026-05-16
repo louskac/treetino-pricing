@@ -1398,7 +1398,7 @@ def generate_pdf(data: dict) -> bytes:
     import sys
     from pathlib import Path
     assets_path = str(Path(__file__).parent.parent.parent / "frontend" / "public")
-    fonts_path = str(Path(__file__).parent / "fonts")
+    fonts_path = os.path.join(assets_path, "fonts")
     
     # Register Roboto Fonts
     try:
