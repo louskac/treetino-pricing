@@ -3,9 +3,6 @@
     "outputDirectory": "frontend/dist",
     "installCommand": "cd frontend && npm install",
     "framework": "vite",
-    "functions": {
-        "api/**": {}
-    },
     "rewrites": [
         {
             "source": "/api/(.*)",
