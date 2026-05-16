@@ -149,7 +149,10 @@ export default function OfferModal({ result, location, energyCost, web3Enabled, 
                 })
             });
 
-            if (!response.ok) throw new Error('PDF generation failed');
+            if (!response.ok) {
+                const errText = await response.text();
+                throw new Error(`PDF generation failed: ${errText}`);
+            }
 
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);

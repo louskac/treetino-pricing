@@ -2,6 +2,7 @@ import asyncio
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, APIRouter, Query, HTTPException
 from fastapi.responses import Response
+import traceback
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 import httpx
@@ -39,7 +40,8 @@ async def handle_generate_pdf(request: dict):
         pdf_bytes = generate_pdf(request)
         return Response(content=pdf_bytes, media_type="application/pdf")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        error_details = traceback.format_exc()
+        raise HTTPException(status_code=500, detail=error_details)
 
 @router.get("/")
 def read_root():
