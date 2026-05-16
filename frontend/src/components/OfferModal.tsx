@@ -173,7 +173,7 @@ export default function OfferModal({ result, location, energyCost, web3Enabled, 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-6"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-6"
             onClick={onClose}
         >
             <motion.div
@@ -182,14 +182,14 @@ export default function OfferModal({ result, location, energyCost, web3Enabled, 
                 exit={{ scale: 0.9, y: 40, opacity: 0 }}
                 transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
                 onClick={(e) => e.stopPropagation()}
-                className="neo-panel w-full max-w-4xl max-h-[90vh] overflow-y-auto p-10 bg-slate-900 flex flex-col gap-8"
+                className="neo-panel w-full max-w-4xl max-h-[90vh] overflow-y-auto p-10 flex flex-col gap-8"
             >
                 {/* Header */}
                 <div className="flex items-start justify-between">
                     <div className="space-y-4">
                         <img src="/branding/logo_horizontal.png" alt="Treetino Logo" className="h-10 w-auto filter brightness-0 invert" />
                         <div className="space-y-1">
-                            <h2 className="text-2xl font-black text-white uppercase tracking-tight">Investiční Nabídka</h2>
+                            <h2 className="text-2xl font-semibold text-white tracking-tight">Investiční Nabídka</h2>
                             <div className="flex items-center gap-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">
                                 <span className="text-treetino-light">Ref: {quoteId()}</span>
                                 <span>•</span>
@@ -199,7 +199,7 @@ export default function OfferModal({ result, location, energyCost, web3Enabled, 
                     </div>
                     <button
                         onClick={onClose}
-                        className="p-3 rounded-xl bg-slate-800 border-2 border-slate-700 hover:border-treetino-light transition-all shadow-neo-hover active:translate-y-0.5 active:shadow-none"
+                        className="p-3 rounded-xl bg-slate-800 border border-slate-700/50 hover:border-treetino-light transition-all shadow-sm"
                     >
                         <X className="w-6 h-6 text-white" />
                     </button>
@@ -208,9 +208,9 @@ export default function OfferModal({ result, location, energyCost, web3Enabled, 
                 {/* Summary Grid */}
                 <div className="grid grid-cols-4 gap-4">
                     {summaryItems.map((item) => (
-                        <div key={item.label} className="p-4 rounded-xl border-2 border-slate-800 bg-slate-950 shadow-neo-hover">
-                            <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">{item.label}</p>
-                            <p className="text-sm font-black text-white uppercase">{item.value}</p>
+                        <div key={item.label} className="p-4 rounded-xl border border-slate-700/50 bg-slate-800 shadow-sm">
+                            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1">{item.label}</p>
+                            <p className="text-sm font-bold text-white">{item.value}</p>
                         </div>
                     ))}
                 </div>
@@ -219,16 +219,16 @@ export default function OfferModal({ result, location, energyCost, web3Enabled, 
                     {/* Left: Detailed Breakdown */}
                     <div className="col-span-3 space-y-6">
                         <div className="space-y-3">
-                            <h3 className="text-xs font-black text-treetino-light uppercase tracking-[0.2em] flex items-center gap-2">
+                            <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-2">
                                 <FileText className="w-3.5 h-3.5" /> Technická Specifikace
                             </h3>
-                            <div className="rounded-xl border-2 border-slate-800 overflow-hidden">
+                            <div className="rounded-xl border border-slate-700/50 overflow-hidden bg-slate-800">
                                 <table className="w-full text-xs">
                                     <tbody>
                                         {techRows.map(([label, value], i) => (
-                                            <tr key={label} className={i % 2 === 0 ? 'bg-slate-800/20' : 'bg-transparent'}>
-                                                <td className="px-4 py-3 text-slate-400 font-bold uppercase tracking-tighter">{label}</td>
-                                                <td className="px-4 py-3 text-white text-right font-black uppercase tracking-tight">{value}</td>
+                                            <tr key={label} className={i % 2 === 0 ? 'bg-white/5' : 'bg-transparent'}>
+                                                <td className="px-4 py-3 text-slate-400 font-medium">{label}</td>
+                                                <td className="px-4 py-3 text-white text-right font-bold">{value}</td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -236,13 +236,13 @@ export default function OfferModal({ result, location, energyCost, web3Enabled, 
                             </div>
                         </div>
 
-                        <div className="p-5 rounded-xl border-2 border-treetino-middle bg-treetino-middle/5 flex items-start gap-4">
-                            <div className="p-3 rounded-lg bg-treetino-light/10 border-2 border-treetino-light/20">
+                        <div className="p-5 rounded-xl border border-blue-900/50 bg-blue-900/20 flex items-start gap-4">
+                            <div className="p-3 rounded-lg bg-slate-800 border border-slate-700/50 shadow-sm">
                                 <Shield className="w-5 h-5 text-treetino-light" />
                             </div>
                             <div className="space-y-1">
-                                <h4 className="text-xs font-black text-white uppercase tracking-wider">Garance Výkonu</h4>
-                                <p className="text-[10px] text-slate-500 leading-relaxed">
+                                <h4 className="text-sm font-semibold text-white">Garance Výkonu</h4>
+                                <p className="text-xs text-slate-400 leading-relaxed">
                                     Tato nabídka vychází z vysoce přesných dat z environmentálního skenování. Energetické stromy standardně zahrnují 25letou záruku na konstrukci a optimalizaci výnosu řízenou AI.
                                 </p>
                             </div>
@@ -251,10 +251,10 @@ export default function OfferModal({ result, location, energyCost, web3Enabled, 
 
                     {/* Right: Street View Map */}
                     <div className="col-span-2 space-y-3 flex flex-col">
-                        <h3 className="text-xs font-black text-treetino-light uppercase tracking-[0.2em] flex items-center gap-2">
+                        <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-2">
                             <Globe className="w-3.5 h-3.5" /> Místo Instalace
                         </h3>
-                        <div className="flex-1 min-h-[300px] neo-panel overflow-hidden bg-slate-950 relative border-2 border-slate-800">
+                        <div className="flex-1 min-h-[300px] rounded-xl overflow-hidden bg-slate-900 relative border border-slate-700/50">
                             {(() => {
                                 const activePins = location.pins && location.pins.length > 0
                                     ? location.pins
@@ -278,6 +278,7 @@ export default function OfferModal({ result, location, energyCost, web3Enabled, 
                                             defaultCenter={{ lat: activePins[0].lat, lng: activePins[0].lng }}
                                             defaultZoom={18}
                                             mapId={GOOGLE_MAP_ID}
+                                            mapTypeId="satellite"
                                             disableDefaultUI={true}
                                             gestureHandling="none"
                                             style={{ width: '100%', height: '100%' }}
@@ -292,28 +293,28 @@ export default function OfferModal({ result, location, energyCost, web3Enabled, 
                                 );
                             })()}
                             <div className="absolute bottom-4 left-4 flex items-center gap-2 pointer-events-none z-10">
-                                <span className="text-[8px] font-black text-slate-500 uppercase bg-slate-900/80 px-2 py-1 rounded border border-slate-700 backdrop-blur-md">Náhled Lokality</span>
+                                <span className="text-[10px] font-semibold text-slate-300 uppercase bg-slate-900/90 px-2 py-1 rounded border border-slate-700 backdrop-blur-md shadow-sm">Náhled Lokality</span>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 {/* Client Info Playground Form */}
-                <div className="grid grid-cols-4 gap-4 border-2 border-slate-800 p-4 rounded-xl bg-slate-950">
+                <div className="grid grid-cols-4 gap-4 border border-slate-700/50 p-5 rounded-xl bg-slate-800">
                     <div className="space-y-2">
-                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                            <User className="w-3 h-3 text-treetino-light" /> Jméno Klienta
+                        <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-2 whitespace-nowrap">
+                            <User className="w-3.5 h-3.5 text-treetino-light" /> Jméno Klienta
                         </label>
                         <input
                             type="text"
                             value={clientName}
                             onChange={(e) => setClientName(e.target.value)}
-                            className="w-full bg-slate-900 border border-slate-800 rounded px-3 py-2 text-white text-sm focus:border-treetino-light outline-none"
+                            className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:border-treetino-light outline-none"
                         />
                     </div>
                     <div className="space-y-2">
-                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                            <MapPin className="w-3 h-3 text-treetino-light" /> IČO (Auto-Doplnění)
+                        <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-2 whitespace-nowrap">
+                            <MapPin className="w-3.5 h-3.5 text-treetino-light" /> IČO (Auto-Doplnění)
                             {isFetchingIco && <Loader2 className="w-3 h-3 animate-spin text-treetino-light" />}
                         </label>
                         <input
@@ -321,20 +322,20 @@ export default function OfferModal({ result, location, energyCost, web3Enabled, 
                             value={ico}
                             onChange={handleIcoChange}
                             placeholder="Zadejte 8 číslic..."
-                            className="w-full bg-slate-900 border border-slate-800 rounded px-3 py-2 text-white text-sm focus:border-treetino-light outline-none"
+                            className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:border-treetino-light outline-none"
                             maxLength={8}
                         />
                         {clientAddress && clientAddress !== 'Energetická 123, Technologické Město' && (
-                            <div className={`text-[9px] leading-tight font-bold pt-1 ${clientAddress.includes('Zkontrolujte') || clientAddress.includes('Zkuste to') ? 'text-red-400' : 'text-treetino-light opacity-80'}`}>
+                            <div className={`text-[10px] leading-tight font-medium pt-1 ${clientAddress.includes('Zkontrolujte') || clientAddress.includes('Zkuste to') ? 'text-red-400' : 'text-treetino-light'}`}>
                                 {clientAddress}
                             </div>
                         )}
                     </div>
                     <div className="space-y-2">
-                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                            <Zap className="w-3 h-3 text-treetino-light" /> Odhadovaná Spotřeba
+                        <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-2 whitespace-nowrap">
+                            <Zap className="w-3.5 h-3.5 text-treetino-light" /> Odhadovaná Spotřeba
                         </label>
-                        <div className="relative flex items-center bg-slate-900 border border-slate-800 rounded focus-within:border-treetino-light transition-colors">
+                        <div className="relative flex items-center bg-slate-900 border border-slate-700 rounded-lg focus-within:border-treetino-light transition-colors">
                             <input
                                 type="number"
                                 min={0}
@@ -356,43 +357,45 @@ export default function OfferModal({ result, location, energyCost, web3Enabled, 
                                         setConsumptionValue(Number((consumptionValue / 1000).toFixed(2)));
                                     }
                                 }}
-                                className="h-full border-l border-slate-800 px-3 text-[10px] font-black text-treetino-light hover:bg-slate-800 hover:text-white transition-colors"
+                                className="h-full border-l border-slate-700 px-3 text-[10px] font-semibold text-treetino-light hover:bg-slate-800 hover:text-white transition-colors"
                             >
                                 {consumptionUnit}
                             </button>
                         </div>
                     </div>
                     <div className="space-y-2">
-                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                            <User className="w-3 h-3 text-treetino-light" /> Logo Klienta
+                        <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-2 whitespace-nowrap">
+                            <User className="w-3.5 h-3.5 text-treetino-light" /> Logo Klienta
                         </label>
                         <div className="relative">
                             <input
                                 type="file"
                                 accept="image/*"
                                 onChange={handleLogoUpload}
-                                className="w-full bg-slate-900 border border-slate-800 rounded px-3 py-1 text-white text-sm focus:border-treetino-light outline-none file:mr-4 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-[10px] file:font-semibold file:bg-treetino-light/10 file:text-treetino-light hover:file:bg-treetino-light/20 cursor-pointer"
+                                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-white text-sm focus:border-treetino-light outline-none file:mr-4 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-[10px] file:font-semibold file:bg-treetino-light/10 file:text-treetino-light hover:file:bg-treetino-light/20 cursor-pointer"
                             />
-                            {clientLogoBase64 && <div className="absolute right-1 top-1/2 -translate-y-1/2 w-6 h-6 rounded bg-slate-800 overflow-hidden"><img src={clientLogoBase64} alt="Logo" className="w-full h-full object-cover" /></div>}
+                            {clientLogoBase64 && <div className="absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 rounded border border-slate-700 bg-slate-800 overflow-hidden p-1 shadow-sm"><img src={clientLogoBase64} alt="Logo" className="w-full h-full object-contain" /></div>}
                         </div>
                     </div>
                 </div>
 
-                <div className="pt-6 border-t-2 border-slate-800 flex items-center justify-between">
+                <div className="pt-6 border-t border-slate-700/50 flex items-center justify-between">
                     <div className="flex items-center gap-6">
-                        <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest">Treetino B2B Obchodní Platforma</p>
-                        <div className="h-4 w-px bg-slate-800" />
-                        <p className="text-[9px] font-black text-treetino-light uppercase tracking-widest">Skóre spolehlivosti: 0.98</p>
+                        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Treetino B2B Obchodní Platforma</p>
+                        <div className="h-4 w-px bg-slate-700" />
+                        <p className="text-[10px] font-bold text-treetino-light uppercase tracking-widest">Skóre spolehlivosti: 0.98</p>
                     </div>
                     <button
                         onClick={handleGeneratePdf}
                         disabled={isGenerating || location.pins.some(p => p.type !== 'main-tree')}
-                        className={`neo-btn-primary !w-auto px-10 py-4 !rounded-full flex items-center gap-2 ${location.pins.some(p => p.type !== 'main-tree') ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        className={`neo-btn-primary !w-auto px-10 py-3.5 !rounded-full flex items-center gap-2 ${location.pins.some(p => p.type !== 'main-tree') ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                         {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                        {location.pins.some(p => p.type !== 'main-tree') 
-                            ? 'Pouze pro V1 Strom' 
-                            : (isGenerating ? 'Generuji...' : 'Generovat PDF Nabídku')}
+                        <span className="font-medium text-sm">
+                            {location.pins.some(p => p.type !== 'main-tree') 
+                                ? 'Pouze pro V1 Strom' 
+                                : (isGenerating ? 'Generuji...' : 'Generovat PDF Nabídku')}
+                        </span>
                     </button>
                 </div>
             </motion.div>

@@ -196,14 +196,14 @@ export default function App() {
         {/* Action Group - Unified Branding Plate */}
         <div className="flex items-center gap-6 pointer-events-auto neo-glass-plate px-6 py-4">
           <img src="/branding/logo_horizontal.png" alt="Treetino Logo" className="h-8 w-auto filter brightness-0 invert" />
-          <div className="h-8 w-px bg-white/10" />
+          <div className="h-8 w-px bg-slate-700" />
           <div className="flex flex-col">
             <RotatingText
               texts={['Energetické Stromy', 'ROI Kalkulačka', 'Budoucnost Energie']}
-              mainClassName="text-[10px] font-black uppercase tracking-[0.2em] text-treetino-light"
+              mainClassName="text-xs font-semibold text-slate-300"
               rotationInterval={3000}
             />
-            <span className="text-[9px] text-slate-500 font-black tracking-widest">V2.0 PRO</span>
+            <span className="text-[10px] text-treetino-light font-bold">V2.0 PRO</span>
           </div>
         </div>
       </div>
@@ -216,10 +216,10 @@ export default function App() {
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               onClick={() => setShowModal(true)}
-              className="neo-btn-secondary pointer-events-auto py-4 px-6 shadow-hyper-glow flex items-center gap-3 border-treetino-light/30 bg-slate-900/80"
+              className="neo-btn-secondary pointer-events-auto py-4 px-6 flex items-center gap-3"
             >
-              <FileText className="w-5 h-5 text-treetino-light" />
-              <span className="text-xs font-black">EXPORTOVAT PDF NABÍDKU</span>
+              <FileText className="w-5 h-5" />
+              <span className="text-sm font-semibold">Exportovat PDF Nabídku</span>
             </motion.button>
           )}
         </AnimatePresence>
@@ -232,63 +232,81 @@ export default function App() {
         transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
         className="absolute top-24 right-8 bottom-8 w-96 z-40 neo-panel p-6 flex flex-col gap-6 overflow-y-auto"
       >
-        <div className="space-y-1 bg-slate-950 -mx-6 -mt-6 p-6 rounded-t-xl border-b border-slate-800">
-          <h2 className="text-xl font-black text-white uppercase tracking-tighter">Konfigurace</h2>
-          <div className="h-1 w-12 bg-treetino-light shadow-[0_0_12px_rgba(39,98,173,0.5)]" />
+        <div className="space-y-1 bg-slate-900 -mx-6 -mt-6 p-6 rounded-t-xl border-b border-slate-700/50">
+          <h2 className="text-xl font-semibold text-white">Konfigurace</h2>
+          <div className="h-1 w-12 bg-treetino-light mt-2 rounded-full" />
         </div>
 
         {/* Product Selection Horizontal Grid */}
         <div className="space-y-4">
-          <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] flex items-center gap-2">
-            <Zap className="w-3 h-3 text-treetino-light" /> 01 VÝBĚR JEDNOTKY
+          <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+            <Zap className="w-3.5 h-3.5 text-treetino-light" /> 01 — Výběr Jednotky
           </label>
           <div className="grid grid-cols-3 gap-2">
-            {PRODUCT_DATA.map((pd) => (
-              <motion.button
-                key={pd.id}
-                whileHover={{ y: -4 }}
-                onClick={() => {
-                  setProduct(pd.id as ProductType);
-                  setResult(null);
-                }}
-                className={`relative group overflow-hidden h-28 text-left transition-all rounded-2xl border-2 ${product === pd.id
-                  ? 'border-treetino-light shadow-hyper-glow bg-slate-800'
-                  : 'border-white/5 bg-slate-900/50 hover:border-white/20'
-                  }`}
-              >
-                <div className="absolute inset-0 z-0">
-                  <img src={pd.image} alt={pd.name} className="w-full h-full object-cover opacity-40 group-hover:opacity-60 transition-opacity" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent" />
-                </div>
-                <div className="relative z-10 p-3 h-full flex flex-col justify-end">
-                  <div className={`text-[10px] font-black text-white uppercase tracking-tighter leading-none ${product === pd.id ? 'text-treetino-accent' : ''}`}>
-                    {pd.name.split(' ')[0]}
+            {PRODUCT_DATA.map((pd) => {
+              const isSelected = product === pd.id;
+              let borderClass = 'border-treetino-light/30 hover:border-treetino-light/60';
+              let textClass = 'text-slate-300 group-hover:text-treetino-light';
+              let bgClass = 'bg-slate-800/80';
+              
+              if (pd.id === 'small-tree') {
+                borderClass = isSelected ? 'border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.4)]' : 'border-yellow-500/30 hover:border-yellow-500/60';
+                textClass = isSelected ? 'text-yellow-500' : 'text-slate-300 group-hover:text-yellow-400';
+                bgClass = isSelected ? 'bg-yellow-500/20' : 'bg-slate-800/80';
+              } else if (pd.id === 'standalone-turbine') {
+                borderClass = isSelected ? 'border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.4)]' : 'border-blue-500/30 hover:border-blue-500/60';
+                textClass = isSelected ? 'text-blue-500' : 'text-slate-300 group-hover:text-blue-400';
+                bgClass = isSelected ? 'bg-blue-500/20' : 'bg-slate-800/80';
+              } else {
+                borderClass = isSelected ? 'border-[#58cca8] shadow-[0_0_15px_rgba(88,204,168,0.4)]' : 'border-[#58cca8]/30 hover:border-[#58cca8]/60';
+                textClass = isSelected ? 'text-[#58cca8]' : 'text-slate-300 group-hover:text-[#58cca8]';
+                bgClass = isSelected ? 'bg-[#58cca8]/20' : 'bg-slate-800/80';
+              }
+
+              return (
+                <motion.button
+                  key={pd.id}
+                  whileHover={{ y: -4 }}
+                  onClick={() => {
+                    setProduct(pd.id as ProductType);
+                    setResult(null);
+                  }}
+                  className={`relative group overflow-hidden h-28 text-left transition-all rounded-2xl border-2 ${borderClass} ${bgClass}`}
+                >
+                  <div className="absolute inset-0 z-0">
+                    <img src={pd.image} alt={pd.name} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity mix-blend-screen" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/50 to-transparent" />
                   </div>
-                </div>
-              </motion.button>
-            ))}
+                  <div className="relative z-10 p-3 h-full flex flex-col justify-end">
+                    <div className={`text-sm font-semibold transition-colors ${textClass}`}>
+                      {pd.name.split(' ')[0]}
+                    </div>
+                  </div>
+                </motion.button>
+              );
+            })}
           </div>
         </div>
 
         {/* Context Card */}
         {location && (
-          <div className="p-5 rounded-2xl bg-white/5 border border-white/10 space-y-4 shadow-inner-light">
+          <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/50 space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <MapPin className="w-4 h-4 text-treetino-light" />
-                <span className="text-[10px] font-black text-white uppercase tracking-widest">Analýza Lokality</span>
+                <span className="text-xs font-semibold text-white uppercase tracking-wider">Analýza Lokality</span>
               </div>
-              <span className="text-[10px] font-mono font-bold text-treetino-light/80">{location.lat.toFixed(4)}, {location.lon.toFixed(4)}</span>
+              <span className="text-[10px] font-mono font-bold text-slate-400">{location.lat.toFixed(4)}, {location.lon.toFixed(4)}</span>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
-                <span className="text-[9px] text-slate-500 font-bold uppercase">Solární potenciál</span>
-                <div className="text-lg font-black text-white">{location.potential ? `${location.potential.solarIndex}%` : '--'}</div>
+                <span className="text-[10px] text-slate-400 font-semibold uppercase">Solární potenciál</span>
+                <div className="text-lg font-bold text-white">{location.potential ? `${location.potential.solarIndex}%` : '--'}</div>
               </div>
               <div className="space-y-1">
-                <span className="text-[9px] text-slate-500 font-bold uppercase">Rychlost větru</span>
-                <div className="text-lg font-black text-white">{location.potential ? `${location.potential.avgWindSpeed}m/s` : '--'}</div>
+                <span className="text-[10px] text-slate-400 font-semibold uppercase">Rychlost větru</span>
+                <div className="text-lg font-bold text-white">{location.potential ? `${location.potential.avgWindSpeed}m/s` : '--'}</div>
               </div>
             </div>
           </div>
@@ -296,9 +314,9 @@ export default function App() {
 
         {/* Sliders */}
         <div className="space-y-4">
-          <div className="space-y-2 pb-2 border-b border-white/5">
+          <div className="space-y-2 pb-2 border-b border-slate-700/50">
             <div className="flex justify-between items-end">
-              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none flex items-center gap-2">
+              <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest leading-none flex items-center gap-2">
                 <MapPin className="w-3 h-3 text-treetino-light" /> Extrahované jednotky z mapy
               </label>
               <span className="text-sm font-bold text-white leading-none">{unitCount}x Systém</span>
@@ -307,72 +325,43 @@ export default function App() {
 
           <div className="space-y-2">
             <div className="flex justify-between items-end">
-              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none">Cena za kWh</label>
+              <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest leading-none">Cena za kWh</label>
               <span className="text-sm font-bold text-white leading-none">{energyCost.toFixed(2)} CZK</span>
             </div>
             <input type="range" min={1.00} max={15.00} step={0.1} value={energyCost}
               onChange={(e) => setEnergyCost(parseFloat(e.target.value))}
-              className="w-full h-1.5 bg-slate-800 rounded-full appearance-none cursor-pointer accent-treetino-light" />
+              className="w-full h-1.5 bg-slate-700 rounded-full appearance-none cursor-pointer accent-treetino-light" />
           </div>
 
           <div className="space-y-2">
             <div className="flex justify-between items-end">
-              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none">Spotřeba</label>
+              <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest leading-none">Spotřeba</label>
               <span className="text-sm font-bold text-white leading-none">{buildingConsumption} MWh</span>
             </div>
             <input type="range" min={10} max={5000} step={10} value={buildingConsumption}
               onChange={(e) => setBuildingConsumption(parseInt(e.target.value))}
-              className="w-full h-1.5 bg-slate-800 rounded-full appearance-none cursor-pointer accent-treetino-light" />
+              className="w-full h-1.5 bg-slate-700 rounded-full appearance-none cursor-pointer accent-treetino-light" />
           </div>
 
           <div className="space-y-2">
             <div className="flex justify-between items-end">
-              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none">Sleva</label>
+              <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest leading-none">Sleva</label>
               <span className="text-sm font-bold text-white leading-none">{discount.toFixed(1)}%</span>
             </div>
             <input type="range" min={0} max={30} step={0.5} value={discount}
               onChange={(e) => setDiscount(parseFloat(e.target.value))}
-              className="w-full h-1.5 bg-slate-800 rounded-full appearance-none cursor-pointer accent-treetino-light" />
+              className="w-full h-1.5 bg-slate-700 rounded-full appearance-none cursor-pointer accent-treetino-light" />
           </div>
         </div>
 
         {/* Toggles */}
-        <div className="grid grid-cols-2 gap-3 pt-2">
-          <button
-            onClick={() => setWeb3Enabled(!web3Enabled)}
-            className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all ${web3Enabled ? 'bg-treetino-light/10 border-treetino-light shadow-neo-accent' : 'bg-slate-900 border-slate-800'}`}
-          >
-            <Globe className={`w-5 h-5 mb-2 ${web3Enabled ? 'text-treetino-light' : 'text-slate-600'}`} />
-            <span className={`text-[9px] font-black uppercase tracking-widest ${web3Enabled ? 'text-white' : 'text-slate-500'}`}>Web3</span>
-          </button>
 
-          <button
-            onClick={() => setEsgEnabled(!esgEnabled)}
-            className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all ${esgEnabled ? 'bg-treetino-light/10 border-treetino-light shadow-neo-accent' : 'bg-slate-900 border-slate-800'}`}
-          >
-            <Shield className={`w-5 h-5 mb-2 ${esgEnabled ? 'text-treetino-light' : 'text-slate-600'}`} />
-            <span className={`text-[9px] font-black uppercase tracking-widest ${esgEnabled ? 'text-white' : 'text-slate-500'}`}>ESG</span>
-          </button>
-        </div>
 
         <div className="flex-1 min-h-[1rem]" />
 
         {/* ROI Results Bar */}
         <AnimatePresence>
-          {result && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              className="px-4 py-3 rounded-xl bg-treetino-light border-2 border-treetino-middle mb-2 overflow-hidden"
-            >
-              <span className="text-[9px] font-black text-treetino-accent uppercase tracking-[0.2em] mb-1 block">Předpokládané roční úspory</span>
-              <div className="flex items-baseline gap-2">
-                <BlurText text={`${annualSavings.toLocaleString()}`} className="text-2xl font-black text-white !justify-start !text-left" animateBy="characters" />
-                <span className="text-2xl font-black text-white">CZK</span>
-                <span className="text-xs font-bold text-treetino-accent">ČISTÉHO</span>
-              </div>
-            </motion.div>
-          )}
+
         </AnimatePresence>
 
         {/* Calculate Button */}
@@ -382,9 +371,9 @@ export default function App() {
           className="neo-btn-primary flex items-center justify-center gap-2 group"
         >
           {loading ? (
-            <><Loader2 className="w-4 h-4 animate-spin" />ANALYZUJI...</>
+            <><Loader2 className="w-4 h-4 animate-spin" />Analyzuji...</>
           ) : (
-            <><TrendingUp className="w-4 h-4 group-hover:translate-y-[-2px] transition-transform" />SPOČÍTAT NÁVRATNOST</>
+            <>Spočítat návratnost</>
           )}
         </button>
       </motion.aside>

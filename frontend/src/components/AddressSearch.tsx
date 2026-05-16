@@ -63,7 +63,7 @@ export default function AddressSearch() {
                     ref={inputRef}
                     type="text"
                     placeholder="Vyhledat adresu..."
-                    className="w-80 bg-slate-900/80 backdrop-blur-md border border-slate-700/50 text-white text-sm rounded-xl focus:ring-1 focus:ring-treetino-light focus:border-treetino-light block w-full pl-10 p-3 shadow-hyper-glow outline-none transition-all placeholder-slate-500"
+                    className="w-80 bg-slate-900/90 backdrop-blur-xl border border-slate-700/50 text-white text-sm rounded-xl focus:ring-1 focus:ring-treetino-light focus:border-treetino-light block w-full pl-10 p-3 shadow-lg outline-none transition-all placeholder-slate-400"
                 />
             </div>
         </div>

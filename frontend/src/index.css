@@ -18,7 +18,7 @@ body,
   width: 100%;
   overflow: hidden;
   background-color: #0f172a;
-  color: #ffffff;
+  color: #f8fafc;
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -27,47 +27,45 @@ body,
 /* ─── Glassmorphism Components ─────────────────────────── */
 @layer components {
   .neo-panel {
-    @apply bg-slate-900/90 backdrop-blur-2xl border border-white/10 rounded-2xl transition-all duration-300;
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+    @apply bg-slate-900/90 backdrop-blur-xl border border-slate-700/50 rounded-2xl transition-all duration-300 text-white;
+    box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5), 0 10px 20px -5px rgba(0, 0, 0, 0.3);
   }
 
   .neo-card {
-    @apply bg-slate-800/40 backdrop-blur-xl border border-white/5 rounded-2xl transition-all duration-300;
+    @apply bg-slate-800/80 border border-slate-700/50 rounded-2xl transition-all duration-300 text-white shadow-sm;
 
     &:hover {
-      @apply bg-slate-800/60 border-treetino-light/30;
-      box-shadow: 0 0 20px rgba(39, 98, 173, 0.3);
+      @apply border-treetino-light/40 shadow-md -translate-y-0.5;
     }
   }
 
   .neo-input {
-    @apply w-full bg-slate-950/50 backdrop-blur-md border border-white/5 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-600 outline-none transition-all duration-300 focus:border-treetino-light/50 focus:bg-slate-900/80;
+    @apply w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-400 outline-none transition-all duration-300 focus:border-treetino-light focus:ring-1 focus:ring-treetino-light focus:bg-slate-900;
   }
 
   .neo-btn-primary {
-    @apply w-full py-4 px-6 rounded-xl font-bold text-sm uppercase tracking-widest bg-treetino-light text-white transition-all duration-200 disabled:opacity-30 disabled:grayscale;
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+    @apply w-full py-3 px-6 rounded-xl font-medium text-sm bg-treetino-light text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2;
 
-    &:hover {
-      @apply brightness-110 -translate-y-0.5;
+    &:hover:not(:disabled) {
+      @apply bg-[#1e40af] -translate-y-0.5 shadow-md;
     }
 
-    &:active {
-      @apply translate-y-0;
+    &:active:not(:disabled) {
+      @apply translate-y-0 shadow-sm;
     }
   }
 
   .neo-btn-secondary {
-    @apply flex items-center gap-2 px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest rounded-xl bg-slate-900/60 backdrop-blur-md border border-white/10 text-slate-300 hover:text-white hover:border-treetino-light/50 hover:bg-slate-800/80 transition-all;
+    @apply flex items-center gap-2 px-5 py-2.5 text-xs font-semibold rounded-xl bg-slate-800 border border-slate-700 text-slate-300 hover:text-white hover:border-slate-500 shadow-sm hover:shadow-md transition-all duration-200;
   }
 
   .neo-glass-plate {
-    @apply bg-slate-950/70 backdrop-blur-2xl border border-white/10 rounded-3xl;
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+    @apply bg-slate-900/90 backdrop-blur-xl border border-slate-700/50 rounded-2xl text-white;
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.3);
   }
 
   .neo-badge {
-    @apply px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest border border-treetino-light/20 bg-treetino-light/5 text-treetino-light/80;
+    @apply px-2.5 py-1 rounded-md text-[10px] font-semibold tracking-wide border border-treetino-light/20 bg-treetino-light/5 text-treetino-light;
   }
 }
 
@@ -218,6 +216,11 @@ model-viewer {
 div[style*="background-color: white"][style*="z-index: 1000001"],
 .gm-banner {
   display: none !important;
+}
+
+/* Move Google Maps Controls away from the right panel */
+.gmnoprint, .gm-style-cc, .gm-fullscreen-control {
+  right: 420px !important; /* 96 (width) + 8 (padding) = 104 * 4px = ~416px */
 }
 
 /* ─── Google Maps Autocomplete Dark Theme ──────────────── */

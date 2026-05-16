@@ -18,10 +18,10 @@ export default {
           950: '#020617',
         },
         treetino: {
-          light: '#2762AD',
-          middle: '#183D89',
-          dark: '#2A293A',
-          accent: '#E8F1FF',
+          light: '#1D4ED8',
+          middle: '#1e3a8a',
+          dark: '#000000',
+          accent: '#00ff99',
         },
         emerald: {
           400: '#34d399',

@@ -15,7 +15,7 @@ def draw_page_1(c: canvas.Canvas, data: dict, assets_path: str):
     import reportlab.lib.utils as utils
     
     # 1. Main Cover Image (Top Header) - with Aspect Ratio Crop
-    main_tree_path = os.path.join(assets_path, "products", "main-tree.png")
+    main_tree_path = os.path.join(assets_path, "products", "strom1.png")
     if not os.path.exists(main_tree_path):
         main_tree_path = os.path.join(assets_path, "products", "main-tree.jpg")
         
@@ -47,7 +47,7 @@ def draw_page_1(c: canvas.Canvas, data: dict, assets_path: str):
     c.setFont("Roboto-Bold", 14)
     tw = c.stringWidth(title, "Roboto-Bold", 14)
     
-    c.setFillColor(colors.HexColor("#1e3a8a"))
+    c.setFillColor(colors.HexColor("#000000"))
     c.roundRect(W - tw - 60, H - 110, tw + 40, 24, 6, fill=1, stroke=0)
     c.setFillColor(colors.white)
     c.drawString(W - tw - 40, H - 103, title)
@@ -56,7 +56,7 @@ def draw_page_1(c: canvas.Canvas, data: dict, assets_path: str):
     c.setFont("Roboto-Bold", 10)
     sub1 = "Treetino corp s.r.o."
     sw1 = c.stringWidth(sub1, "Roboto-Bold", 10)
-    c.setFillColor(colors.HexColor("#1e3a8a"))
+    c.setFillColor(colors.HexColor("#000000"))
     c.roundRect(W - sw1 - 60, H - 138, sw1 + 40, 20, 6, fill=1, stroke=0)
     c.setFillColor(colors.white)
     c.drawString(W - sw1 - 40, H - 132, sub1)
@@ -64,7 +64,7 @@ def draw_page_1(c: canvas.Canvas, data: dict, assets_path: str):
     # Date Box
     sub2 = "Vystaveno: 02.02.2026"
     sw2 = c.stringWidth(sub2, "Roboto-Bold", 10)
-    c.setFillColor(colors.HexColor("#1e3a8a"))
+    c.setFillColor(colors.HexColor("#000000"))
     c.roundRect(W - sw2 - 60, H - 162, sw2 + 40, 20, 6, fill=1, stroke=0)
     c.setFillColor(colors.white)
     c.drawString(W - sw2 - 40, H - 156, sub2)
@@ -87,7 +87,7 @@ def draw_page_1(c: canvas.Canvas, data: dict, assets_path: str):
         except Exception as e:
             print("Failed to decode logo:", e)
     else:
-        c.setFillColor(colors.HexColor("#2a1b7a"))
+        c.setFillColor(colors.HexColor("#000000"))
         client_name = data.get("clientName", "M - KOVO")
         max_w = W - 100
         font_size = 80
@@ -139,10 +139,10 @@ def draw_page_2(c: canvas.Canvas, data: dict, assets_path: str):
     result = data.get("result", {})
     
     c.setFont("Roboto-Bold", 14)
-    c.setFillColor(colors.HexColor("#3366cc"))
+    c.setFillColor(colors.HexColor("#1D4ED8"))
     c.drawString(40, H - 50, "Strom V1")
     c.setLineWidth(1)
-    c.setStrokeColor(colors.HexColor("#3366cc"))
+    c.setStrokeColor(colors.HexColor("#1D4ED8"))
     c.line(40, H - 55, W - 40, H - 55)
     
     text = (
@@ -170,7 +170,7 @@ def draw_page_2(c: canvas.Canvas, data: dict, assets_path: str):
         c.drawString(40, y_pos, line)
         y_pos -= 14
     
-    main_tree_path = os.path.join(assets_path, "products", "main-tree.png")
+    main_tree_path = os.path.join(assets_path, "products", "strom1.png")
     if os.path.exists(main_tree_path):
         c.drawImage(main_tree_path, 40, y_pos - 240, width=W-80, height=220, preserveAspectRatio=True)
         y_pos -= 260

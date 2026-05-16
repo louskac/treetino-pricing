@@ -1,6 +1,6 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect, useRef } from 'react';
 import { APIProvider, Map3D, Marker3D, MapMode, AltitudeMode, Pin } from '@vis.gl/react-google-maps';
-import { MapPin, Sparkles, Sun, Wind, Globe, X } from 'lucide-react';
+import { MapPin, Sparkles, Sun, Wind, Globe, X, Trash2 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { SelectedLocation, PinLocation, SpotPotential } from '../types';
@@ -53,6 +53,35 @@ export default function MapCanvas({ onLocationSelect, selectedLocation, onPinsCh
         onPinsChange?.(newPins);
     }, [pins, onPinsChange]);
 
+    useEffect(() => {
+        if (!HAS_KEY) return;
+        const interval = setInterval(() => {
+            const mapEl = document.querySelector('gmp-map-3d');
+            if (mapEl && mapEl.shadowRoot) {
+                if (!mapEl.shadowRoot.querySelector('#treetino-controls-style')) {
+                    const style = document.createElement('style');
+                    style.id = 'treetino-controls-style';
+                    style.textContent = `
+                        /* Move Google Maps 3D internal controls away from the right edge */
+                        div[style*="right: 0"], div[style*="right: 10px"], div[style*="right: 16px"] {
+                            right: 420px !important;
+                        }
+                        /* Also target standard classes if they exist in shadow DOM */
+                        .gm-bundled-control, .gm-fullscreen-control, .gm-style-cc {
+                            right: 420px !important;
+                        }
+                        /* Sometimes the container has explicit right/bottom classes */
+                        .bottom.right, .top.right {
+                            right: 420px !important;
+                        }
+                    `;
+                    mapEl.shadowRoot.appendChild(style);
+                }
+            }
+        }, 1000);
+        return () => clearInterval(interval);
+    }, []);
+
     if (!HAS_KEY) {
         return <FallbackMap />;
     }
@@ -94,19 +123,52 @@ export default function MapCanvas({ onLocationSelect, selectedLocation, onPinsCh
 }
 
 function PinOverlay({ pin, potential, onRemove }: { pin: PinLocation, potential?: SpotPotential, onRemove: () => void }) {
-    // Determine color based on product type
-    let colorClass = "fill-treetino-light shadow-[0_0_15px_rgba(88,204,168,0.5)] bg-treetino-light/30 border-treetino-light";
-    let pinColor = "#58cca8"; // tree green
-    let iconLabel = "MAIN TREE";
+    const [isHovered, setIsHovered] = useState(false);
+
+    // SVG Icon Paths
+    let strokeColor = "#58cca8"; // tree green
+    let iconPaths = (
+        <>
+            <path d="m17 14 3 3.3a1 1 0 0 1-.7 1.7H4.7a1 1 0 0 1-.7-1.7L7 14h-.3a1 1 0 0 1-.7-1.7L9 9h-.2A1 1 0 0 1 8 7.3L12 3l4 4.3a1 1 0 0 1-.8 1.7H15l3 3.3a1 1 0 0 1-.8 1.7H17Z"/>
+            <path d="M12 22v-3"/>
+        </>
+    );
     
-    if (pin.type === 'small-tree') {
-        colorClass = "fill-amber-400 shadow-[0_0_15px_rgba(251,191,36,0.5)] bg-amber-400/30 border-amber-400";
-        pinColor = "#fbbf24";
-        iconLabel = "SMALL TREE";
+    if (isHovered) {
+        strokeColor = "#ef4444"; // red
+        iconPaths = (
+            <>
+                <path d="M3 6h18"/>
+                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                <line x1="10" x2="10" y1="11" y2="17"/>
+                <line x1="14" x2="14" y1="11" y2="17"/>
+            </>
+        );
+    } else if (pin.type === 'small-tree') {
+        strokeColor = "#eab308"; // amber/yellow for sun
+        iconPaths = (
+            <>
+                <circle cx="12" cy="12" r="4"/>
+                <path d="M12 2v2"/>
+                <path d="M12 20v2"/>
+                <path d="m4.93 4.93 1.41 1.41"/>
+                <path d="m17.66 17.66 1.41 1.41"/>
+                <path d="M2 12h2"/>
+                <path d="M20 12h2"/>
+                <path d="m6.34 17.66-1.41 1.41"/>
+                <path d="m19.07 4.93-1.41 1.41"/>
+            </>
+        );
     } else if (pin.type === 'standalone-turbine') {
-        colorClass = "fill-blue-400 shadow-[0_0_15px_rgba(96,165,250,0.5)] bg-blue-400/30 border-blue-400";
-        pinColor = "#60a5fa";
-        iconLabel = "TURBINE";
+        strokeColor = "#3b82f6"; // blue
+        iconPaths = (
+            <>
+                <path d="M17.7 7.7a2.5 2.5 0 1 1 1.8 4.3H2"/>
+                <path d="M9.6 4.6A2 2 0 1 1 11 8H2"/>
+                <path d="M12.6 19.4A2 2 0 1 0 14 16H2"/>
+            </>
+        );
     }
 
     return (
@@ -115,10 +177,27 @@ function PinOverlay({ pin, potential, onRemove }: { pin: PinLocation, potential?
                 position={{ lat: pin.lat, lng: pin.lng, altitude: 0 }}
                 altitudeMode={AltitudeMode.CLAMP_TO_GROUND}
                 onClick={(e: any) => {
+                    if (e && e.stopPropagation) e.stopPropagation();
+                    if (e && e.preventDefault) e.preventDefault();
+                    if (e && e.domEvent && e.domEvent.stopPropagation) e.domEvent.stopPropagation();
                     onRemove();
                 }}
+                // @ts-ignore
+                onMouseEnter={() => setIsHovered(true)}
+                // @ts-ignore
+                onMouseLeave={() => setIsHovered(false)}
+                title="Kliknutím odstraníte"
             >
-                <Pin background={pinColor} borderColor={colorClass.includes('amber') ? '#d97706' : colorClass.includes('blue') ? '#2563eb' : '#059669'} glyphColor="white" />
+                <svg xmlns="http://www.w3.org/2000/svg" width="60" height="80" viewBox="0 0 60 80" fill="none">
+                    {/* Dashed line connecting to ground */}
+                    <line x1="30" y1="45" x2="30" y2="80" stroke={strokeColor} strokeWidth="3" strokeDasharray="4 4" opacity="0.8"/>
+                    {/* Jet Black circular background */}
+                    <circle cx="30" cy="26" r="24" fill="#0f172a" fillOpacity="0.95" stroke={strokeColor} strokeWidth="3" />
+                    {/* Inner Icon */}
+                    <g transform="translate(18, 14)" stroke={strokeColor} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none">
+                        {iconPaths}
+                    </g>
+                </svg>
             </Marker3D>
         </>
     );

@@ -31,84 +31,84 @@ export default function AnalyticsPanel({ result, energyCost, web3Enabled, esgEna
             className="grid grid-cols-3 gap-6 w-full h-[320px]"
         >
             {/* Card 1: Production (Stacked Solar & Wind) */}
-            <div className="neo-panel p-6 bg-slate-900 overflow-hidden relative group">
-                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+            <div className="neo-panel p-6 overflow-hidden relative group">
+                <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
                     <Zap className="w-16 h-16 text-treetino-light" />
                 </div>
                 <EnergyChart data={result.monthlyData} totalKwh={totalKwh} lastWeekKwh={result.lastWeekKwh} />
             </div>
 
             {/* Card 2: Economics */}
-            <div className="neo-panel p-6 bg-slate-900 flex flex-col gap-6">
+            <div className="neo-panel p-6 flex flex-col gap-6">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <TrendingUp className="w-5 h-5 text-treetino-light" />
-                        <h3 className="text-sm font-black text-white uppercase tracking-tight">Finance</h3>
+                        <h3 className="text-base font-semibold text-white">Finance</h3>
                     </div>
                 </div>
 
                 <div className="space-y-4">
-                    <div className="p-4 rounded-xl border border-white/10 bg-slate-950/50" style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
-                        <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-1">Návratnost</p>
-                        <p className="text-3xl font-black text-treetino-light">
+                    <div className="p-4 rounded-xl border border-slate-700/50 bg-slate-800">
+                        <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest mb-1">Návratnost</p>
+                        <p className="text-3xl font-bold text-treetino-light">
                             {paybackYears} <span className="text-xs uppercase">Roků</span>
                         </p>
                         <div className="flex items-center gap-2 mt-1">
-                            <span className="text-[10px] font-bold text-slate-400">{roiPercentage}% Výnos</span>
+                            <span className="text-[10px] font-semibold text-slate-400">{roiPercentage}% Výnos</span>
                             {web3Enabled && (
                                 <span className="neo-badge">P2P Bonus</span>
                             )}
                         </div>
                     </div>
 
-                    <div className="flex flex-col gap-2 mt-auto pt-2 border-t border-white/5">
+                    <div className="flex flex-col gap-2 mt-auto pt-2 border-t border-slate-700/50">
                         <div className="flex justify-between items-center">
-                            <p className="text-[9px] text-slate-500 font-extrabold uppercase tracking-tight">Investice</p>
-                            <p className="text-sm font-black text-white">{investment.toLocaleString()} CZK</p>
+                            <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide">Investice</p>
+                            <p className="text-sm font-bold text-white">{investment.toLocaleString()} CZK</p>
                         </div>
                         <div className="flex justify-between items-center">
-                            <p className="text-[9px] text-slate-500 font-extrabold uppercase tracking-tight">Úspora/Rok</p>
-                            <p className="text-sm font-black text-treetino-accent">{annualSavings.toLocaleString()} CZK</p>
+                            <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide">Úspora/Rok</p>
+                            <p className="text-sm font-bold text-green-400">{annualSavings.toLocaleString()} CZK</p>
                         </div>
                     </div>
                 </div>
             </div>
 
             {/* Card 3: ESG */}
-            <div className="neo-panel p-6 bg-slate-900 flex flex-col gap-6">
+            <div className="neo-panel p-6 flex flex-col gap-6">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <Leaf className="w-5 h-5 text-treetino-light" />
-                        <h3 className="text-sm font-black text-white uppercase tracking-tight">Ekologický Dopad</h3>
+                        <h3 className="text-base font-semibold text-white">Ekologický Dopad</h3>
                     </div>
                     {esgEnabled && <Shield className="w-4 h-4 text-treetino-light" />}
                 </div>
 
                 <div className="space-y-5">
-                    <div className="p-4 rounded-xl border border-white/10 bg-slate-950/50" style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
-                        <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-1">Úspora CO₂</p>
-                        <p className="text-3xl font-black text-white">
-                            {co2Offset.toFixed(1)} <span className="text-xs uppercase">Tun/Rok</span>
+                    <div className="p-4 rounded-xl border border-slate-700/50 bg-slate-800">
+                        <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest mb-1">Úspora CO₂</p>
+                        <p className="text-3xl font-bold text-white">
+                            {co2Offset.toFixed(1)} <span className="text-xs uppercase text-slate-400">Tun/Rok</span>
                         </p>
                     </div>
 
                     <div className="space-y-3">
                         <div className="flex items-center gap-4">
-                            <div className="w-8 h-8 rounded-lg bg-treetino-light/10 border-2 border-treetino-light/20 flex items-center justify-center shrink-0">
+                            <div className="w-8 h-8 rounded-lg bg-blue-900/20 border border-treetino-light/20 flex items-center justify-center shrink-0">
                                 <TreePine className="w-4 h-4 text-treetino-light" />
                             </div>
                             <div>
-                                <p className="text-sm font-black text-white leading-none">{treesEquiv.toLocaleString()}</p>
-                                <p className="text-[9px] text-slate-500 font-bold uppercase tracking-tighter">Ekvivalent Stromů</p>
+                                <p className="text-sm font-bold text-white leading-none">{treesEquiv.toLocaleString()}</p>
+                                <p className="text-[10px] text-slate-400 font-semibold uppercase">Ekvivalent vysazených stromů</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-4">
-                            <div className="w-8 h-8 rounded-lg bg-treetino-light/10 border-2 border-treetino-light/20 flex items-center justify-center shrink-0">
+                            <div className="w-8 h-8 rounded-lg bg-blue-900/20 border border-treetino-light/20 flex items-center justify-center shrink-0">
                                 <Car className="w-4 h-4 text-treetino-light" />
                             </div>
                             <div>
-                                <p className="text-sm font-black text-white leading-none">{evKm} KM</p>
-                                <p className="text-[9px] text-slate-500 font-bold uppercase tracking-tighter">Ekvivalent Nájezdu EV</p>
+                                <p className="text-sm font-bold text-white leading-none">{evKm} KM</p>
+                                <p className="text-[10px] text-slate-400 font-semibold uppercase">Ekvivalent Nájezdu EV</p>
                             </div>
                         </div>
                     </div>
@@ -124,15 +124,15 @@ function EnergyChart({ data, totalKwh, lastWeekKwh }: { data: ROIResult['monthly
         <div className="h-full flex flex-col gap-4">
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-treetino-light/10 border-2 border-treetino-light/20 flex items-center justify-center">
+                    <div className="w-8 h-8 rounded-lg bg-blue-900/20 border border-treetino-light/20 flex items-center justify-center">
                         <Sparkles className="w-4 h-4 text-treetino-light" />
                     </div>
-                    <h3 className="text-sm font-black text-white uppercase tracking-tight">Výroba Energie</h3>
+                    <h3 className="text-base font-semibold text-white">Výroba Energie</h3>
                 </div>
                 <div className="flex flex-col text-right">
-                    <span className="text-[9px] text-slate-500 font-black uppercase tracking-tighter block">MINULÝ TÝDEN</span>
-                    <span className="text-sm font-black text-treetino-accent">{lastWeekKwh.toLocaleString()} kWh</span>
-                    <span className="text-[8px] text-slate-600 font-bold uppercase mt-1">REÁLNÁ DATA</span>
+                    <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block">Minulý Týden</span>
+                    <span className="text-sm font-bold text-treetino-light">{lastWeekKwh.toLocaleString()} kWh</span>
+                    <span className="text-[8px] text-slate-500 font-semibold uppercase mt-1">Reálná Data</span>
                 </div>
             </div>
 
@@ -142,29 +142,28 @@ function EnergyChart({ data, totalKwh, lastWeekKwh }: { data: ROIResult['monthly
                         <CartesianGrid strokeDasharray="0" stroke="#1e293b" vertical={false} />
                         <XAxis
                             dataKey="month"
-                            tick={{ fontSize: 9, fill: '#64748b', fontWeight: 900 }}
+                            tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }}
                             axisLine={false}
                             tickLine={false}
                         />
                         <YAxis
-                            tick={{ fontSize: 9, fill: '#64748b', fontWeight: 900 }}
+                            tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }}
                             axisLine={false}
                             tickLine={false}
                             width={40}
                             tickFormatter={(v: number) => `${Math.round(v)}`}
                         />
                         <Tooltip
-                            cursor={{ fill: 'rgba(51, 65, 85, 0.2)' }}
+                            cursor={{ fill: 'rgba(30, 41, 59, 0.5)' }}
                             contentStyle={{
-                                background: 'rgba(15, 23, 42, 0.95)',
-                                backdropFilter: 'blur(12px)',
-                                border: '1px solid rgba(255, 255, 255, 0.1)',
+                                background: '#0f172a',
+                                border: '1px solid #1e293b',
                                 borderRadius: '12px',
                                 fontSize: '11px',
-                                color: '#fff',
-                                boxShadow: '0 10px 25px rgba(0,0,0,0.5)'
+                                color: '#f8fafc',
+                                boxShadow: '0 10px 25px rgba(0,0,0,0.3)'
                             }}
-                            itemStyle={{ fontWeight: 800, textTransform: 'uppercase', fontSize: '10px' }}
+                            itemStyle={{ fontWeight: 600, fontSize: '10px' }}
                             formatter={(v, name) => [`${Number(v).toLocaleString()} kWh`, name]}
                         />
                         <Legend wrapperStyle={{ fontSize: '9px', fontWeight: 900, textTransform: 'uppercase', paddingTop: '15px' }} iconType="rect" iconSize={8} />

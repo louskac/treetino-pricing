@@ -3,6 +3,14 @@
     "outputDirectory": "frontend/dist",
     "installCommand": "cd frontend && npm install",
     "framework": "vite",
+    "functions": {
+        "api/**": {
+            "includeFiles": [
+                "backend/app/fonts/**",
+                "frontend/public/**"
+            ]
+        }
+    },
     "rewrites": [
         {
             "source": "/api/(.*)",
