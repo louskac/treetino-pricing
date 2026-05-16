@@ -2,7 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import { useMap3D, useMapsLibrary } from '@vis.gl/react-google-maps';
 import { Search } from 'lucide-react';
 
-export default function AddressSearch() {
+interface AddressSearchProps {
+    onPlaceSelect?: (lat: number, lng: number) => void;
+}
+
+export default function AddressSearch({ onPlaceSelect }: AddressSearchProps) {
     const inputRef = useRef<HTMLInputElement>(null);
     const [autocomplete, setAutocomplete] = useState<google.maps.places.Autocomplete | null>(null);
     const placesLib = useMapsLibrary('places');
@@ -28,6 +32,8 @@ export default function AddressSearch() {
 
             const lat = place.geometry.location.lat();
             const lng = place.geometry.location.lng();
+            
+            onPlaceSelect?.(lat, lng);
 
             // Fly the camera to the new location
             if (typeof map3D.flyCameraTo === 'function') {

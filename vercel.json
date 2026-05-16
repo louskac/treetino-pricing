@@ -4,9 +4,7 @@
     "installCommand": "cd frontend && npm install",
     "framework": "vite",
     "functions": {
-        "api/**": {
-            "includeFiles": "frontend/public/**"
-        }
+        "api/**": {}
     },
     "rewrites": [
         {

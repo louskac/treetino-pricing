@@ -21,6 +21,14 @@ interface Props {
 
 export default function MapCanvas({ onLocationSelect, selectedLocation, onPinsChange, product }: Props) {
     const [pins, setPins] = useState<PinLocation[]>(selectedLocation?.pins || []);
+    const [searchPin, setSearchPin] = useState<{lat: number, lng: number} | null>(null);
+
+    const handlePlaceSelect = useCallback((lat: number, lng: number) => {
+        setSearchPin({ lat, lng });
+        setTimeout(() => {
+            setSearchPin(null);
+        }, 10000);
+    }, []);
 
     const handleClick = useCallback((e: any) => {
         if (!e.detail.latLng) return;
@@ -89,7 +97,7 @@ export default function MapCanvas({ onLocationSelect, selectedLocation, onPinsCh
     return (
         <div className="absolute inset-0 map-container">
             <APIProvider apiKey={GOOGLE_MAPS_API_KEY} libraries={['marker', 'maps3d', 'places']} version="alpha">
-                <AddressSearch />
+                <AddressSearch onPlaceSelect={handlePlaceSelect} />
                 <Map3D
                     defaultCenter={{ ...INITIAL_VIEW, altitude: 500 }}
                     defaultRange={1000}
@@ -116,6 +124,19 @@ export default function MapCanvas({ onLocationSelect, selectedLocation, onPinsCh
                             onRemove={() => handleRemovePin(pin.id)} 
                         />
                     ))}
+                    {searchPin && (
+                        <Marker3D
+                            position={{ lat: searchPin.lat, lng: searchPin.lng }}
+                            altitudeMode={AltitudeMode.RELATIVE_TO_GROUND}
+                        >
+                            <Pin
+                                background="#ef4444"
+                                borderColor="#b91c1c"
+                                glyphColor="#ffffff"
+                                scale={1.2}
+                            />
+                        </Marker3D>
+                    )}
                 </Map3D>
             </APIProvider>
         </div>

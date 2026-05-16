@@ -1397,8 +1397,8 @@ def generate_pdf(data: dict) -> bytes:
     # We need the path to assets to inject images
     import sys
     from pathlib import Path
-    assets_path = str(Path(__file__).parent.parent.parent / "frontend" / "public")
-    fonts_path = os.path.join(assets_path, "fonts")
+    assets_path = str(Path(__file__).parent / "assets")
+    fonts_path = str(Path(__file__).parent / "fonts")
     
     # Register Roboto Fonts
     try:
