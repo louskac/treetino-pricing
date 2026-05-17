@@ -379,21 +379,30 @@ def draw_page_3(c: canvas.Canvas, data: dict, assets_path: str):
         map_image_path = os.path.join(assets_path, "products", "top_view.png")
         if not os.path.exists(map_image_path): map_image_path = os.path.join(assets_path, "top_view.png")
         if os.path.exists(map_image_path):
+            img_w, img_h = img.size
+            physical_tile_size = 256 * (img_w / sw)
+            
+            # Trees are 17 meters wide
+            meters_per_pixel = (40075016.686 * math.cos(math.radians(center_lat))) / (physical_tile_size * (2 ** zoom))
+            pixels_per_meter = 1 / meters_per_pixel if meters_per_pixel > 0 else 1
+            tree_size = max(10, int(17 * pixels_per_meter))
+            
             tree_icon = Image.open(map_image_path).convert("RGBA")
-            tree_size = 120
             tree_icon = tree_icon.resize((tree_size, tree_size), Image.Resampling.LANCZOS)
+            
             def latlon_to_pixels(lon, lat, z):
                 n = 2.0 ** z
-                x = (lon + 180.0) / 360.0 * n * 512
-                y = (1.0 - math.log(math.tan(math.radians(lat)) + (1.0 / math.cos(math.radians(lat)))) / math.pi) / 2.0 * n * 512
+                x = (lon + 180.0) / 360.0 * n * physical_tile_size
+                y = (1.0 - math.log(math.tan(math.radians(lat)) + (1.0 / math.cos(math.radians(lat)))) / math.pi) / 2.0 * n * physical_tile_size
                 return x, y
+                
             mcx, mcy = latlon_to_pixels(center_lon, center_lat, zoom)
             from PIL import ImageDraw
+            draw = ImageDraw.Draw(img)
             for p in pins:
                 px, py = latlon_to_pixels(p["lng"], p["lat"], zoom)
-                ix = int(sw + (px - mcx) * 2) - tree_size // 2
-                iy = int(sh + (py - mcy) * 2) - tree_size // 2
-                draw = ImageDraw.Draw(img)
+                ix = int(img_w / 2 + (px - mcx)) - tree_size // 2
+                iy = int(img_h / 2 + (py - mcy)) - tree_size // 2
                 draw.ellipse([ix - 4, iy - 4, ix + tree_size + 4, iy + tree_size + 4], outline="#38bdf8", width=4)
                 img.paste(tree_icon, (ix, iy), tree_icon)
         

@@ -296,11 +296,22 @@ export default function OfferModal({ result, location, energyCost, web3Enabled, 
                                             gestureHandling="none"
                                             style={{ width: '100%', height: '100%' }}
                                         >
-                                            {activePins.map((p, idx) => (
-                                                <AdvancedMarker key={idx} position={{ lat: p.lat, lng: p.lng }}>
-                                                    <img src="/top_view.png" alt="Tree Instance" className="w-[80px] h-[80px] object-contain drop-shadow-2xl" />
-                                                </AdvancedMarker>
-                                            ))}
+                                            {activePins.map((p, idx) => {
+                                                // Calculate pixels per meter at zoom level 18
+                                                const metersPerPixel = (40075016.686 * Math.cos(p.lat * Math.PI / 180)) / (256 * Math.pow(2, 18));
+                                                const treePixels = 17 / metersPerPixel;
+                                                
+                                                return (
+                                                    <AdvancedMarker key={idx} position={{ lat: p.lat, lng: p.lng }}>
+                                                        <img 
+                                                            src="/top_view.png" 
+                                                            alt="Tree Instance" 
+                                                            style={{ width: `${treePixels}px`, height: `${treePixels}px` }}
+                                                            className="object-contain drop-shadow-2xl translate-y-[50%]" 
+                                                        />
+                                                    </AdvancedMarker>
+                                                );
+                                            })}
                                         </Map>
                                     </APIProvider>
                                 );
