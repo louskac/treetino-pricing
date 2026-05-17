@@ -1301,7 +1301,7 @@ def draw_page_6(c: canvas.Canvas, data: dict, assets_path: str):
     c.linkURL("https://www.treetino.com", (40, btn_y, 140, btn_y + 25), relative=1)
     
     # Phone image constrained to a bounding box
-    phone_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "frontend", "public", "phone.png")
+    phone_path = os.path.join(assets_path, "images", "phone.png")
     if os.path.exists(phone_path):
         c.drawImage(phone_path, W - 220, 10, width=200, height=200, preserveAspectRatio=True, mask='auto')
 
