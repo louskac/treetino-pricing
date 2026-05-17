@@ -35,10 +35,9 @@ def draw_page_1(c: canvas.Canvas, data: dict, assets_path: str):
         
         c.drawImage(main_tree_path, x_pos, y_pos, width=target_w, height=target_h, mask='auto')
         
-    # Dark overlay over the entire page to make text pop
+    # Dark slate overlay to make text pop and match other pages
     c.saveState()
-    c.setFillColor(colors.black)
-    c.setFillAlpha(0.65)
+    c.setFillColor(colors.Color(0.06, 0.08, 0.12, alpha=0.75))
     c.rect(0, 0, W, H, fill=1, stroke=0)
     c.restoreState()
         
@@ -66,18 +65,15 @@ def draw_page_1(c: canvas.Canvas, data: dict, assets_path: str):
     
     c.setFont("Roboto-Bold", 22)
     c.setFillColor(colors.white)
-    c.drawCentredString(W / 2.0, H - 170, f"Strom s Výkonem {per_tree_power} kW")
     
-    # 3. Bottom Translucent Gradient Overlay
-    overlay_height = 350
-    c.saveState()
-    c.setFillColor(colors.black)
-    for i in range(overlay_height):
-        progress = i / float(overlay_height)
-        alpha = 0.95 * ((1.0 - progress) ** 1.5)
-        c.setFillAlpha(alpha)
-        c.rect(0, i, W, 1.5, fill=1, stroke=0)
-    c.restoreState()
+    if unit_count > 1:
+        top_text = f"Soustava s Výkonem {per_tree_power * unit_count} kW"
+    else:
+        top_text = f"Strom s Výkonem {per_tree_power} kW"
+        
+    c.drawCentredString(W / 2.0, H - 170, top_text)
+    
+
     
     # 4. Text inside the overlay
     c.setFillColor(colors.white)
@@ -553,9 +549,13 @@ def draw_page_3(c: canvas.Canvas, data: dict, assets_path: str):
     c.drawRightString(loss_x + loss_w - 20, loss_y + 15, f"{vyroba_mwh_str} MWh")
 
     # 6. Meteorological Station info
+    location = data.get("location", {})
+    lat = location.get("lat", 0)
+    lon = location.get("lon", 0)
+    station_text = f"Satelitní grid lokalita: {lat:.4f}°N, {lon:.4f}°E, Zdroj: PVGIS & Open-Meteo"
     c.setFont("Roboto", 8)
     c.setFillColor(colors.HexColor("#94a3b8"))
-    c.drawCentredString(W/2, 60, "Stanice: Kostelní Myslová (25 km daleko), Zdroj: Meteonorm 8.2")
+    c.drawCentredString(W/2, 60, station_text)
 
     # Footer
     c.setFont("Roboto", 8)
@@ -907,11 +907,17 @@ def draw_page_5(c: canvas.Canvas, data: dict, assets_path: str):
     c.setFillColor(ACCENT_COLOR)
     c.drawString(60, card2_y + card2_h - 60, "POLOHA & SÍŤ")
     
+    location = data.get("location", {})
+    lat = location.get("lat", 0)
+    lon = location.get("lon", 0)
+    from datetime import datetime
+    today_str = datetime.now().strftime("%d. %m. %Y")
+    
     params_left = [
-        ("Časové pásmo", "2. 2. 2026 SEČ (Prague)"),
-        ("Meteorologická stanice", "Kostelní Myslová (25 km daleko)"),
-        ("Nadmořská výška stanice", "569 m"),
-        ("Zdroj dat stanice", "Meteonorm 8.2"),
+        ("Datum simulace", f"{today_str} (SEČ)"),
+        ("Meteorologická stanice", f"Grid {lat:.4f}°N, {lon:.4f}°E"),
+        ("Nadmořská výška stanice", "Dle digitálního modelu terénu"),
+        ("Zdroj dat", "PVGIS SARAH2 & Open-Meteo ERA5"),
         ("Síť", "400V L-L, 230V L-N")
     ]
     
@@ -997,9 +1003,14 @@ def draw_page_6(c: canvas.Canvas, data: dict, assets_path: str):
     subsidy_amount = final_price * 0.30
     subsidy_price = result.get("subsidyPrice", final_price * 0.70)
     
-    units_qty = 3 if final_price > 10000000 else 1
+    location = data.get("location", {})
+    pins = location.get("pins", [])
+    units_qty = len(pins) if pins else 1
     unit_price = total_before_discount / units_qty
     client_name = data.get("clientName", "M - KOVO s.r.o.")
+    client_address = data.get("clientAddress", "Nezadáno")
+    ico_val = data.get("ico", "") or "Nezadáno"
+    dic_val = data.get("dic", "") or "Nezadáno"
 
     # 1. Background
     import reportlab.lib.utils as utils
@@ -1043,6 +1054,23 @@ def draw_page_6(c: canvas.Canvas, data: dict, assets_path: str):
     c.setFont("Roboto", 9)
     c.setFillColor(MUTED_COLOR)
     c.drawString(40, H - 85, "Vystaveno: 2. 2. 2026")
+    
+    import base64
+    client_logo_b64 = data.get("clientLogoBase64")
+    if client_logo_b64:
+        try:
+            b64_data = client_logo_b64.split(",", 1)[1] if "," in client_logo_b64 else client_logo_b64
+            img_data = base64.b64decode(b64_data)
+            img_reader = utils.ImageReader(io.BytesIO(img_data))
+            
+            max_w, max_h = 100, 50
+            iw, ih = img_reader.getSize()
+            scale = min(max_w / float(iw), max_h / float(ih))
+            w, h = iw * scale, ih * scale
+            
+            c.drawImage(img_reader, W - 40 - w, H - 40 - h + 8, width=w, height=h, mask='auto')
+        except Exception as e:
+            print("Failed to draw client logo:", e)
     
     # 3. TOP CARDS (Supplier & Client)
     card_y = H - 220
@@ -1098,15 +1126,21 @@ def draw_page_6(c: canvas.Canvas, data: dict, assets_path: str):
     c.drawString(col3, card_y + card_h - 40, str(client_name))
     c.setFont("Roboto", 9)
     c.setFillColor(MUTED_COLOR)
-    c.drawString(col3, card_y + card_h - 55, "Rantířov 143, 58841 Rantířov")
-    c.drawString(col3, card_y + card_h - 70, "Česká republika")
+    
+    # Simple split for address if it's too long
+    from reportlab.lib.utils import simpleSplit
+    addr_lines = simpleSplit(client_address, "Roboto", 9, card_w - 20)
+    ay = card_y + card_h - 55
+    for al in addr_lines[:2]:
+        c.drawString(col3, ay, al)
+        ay -= 15
     
     c.setFont("Roboto-Bold", 8)
     c.drawString(col3, card_y + 20, "IČO")
     c.drawString(col4, card_y + 20, "DIČ")
     c.setFillColor(TEXT_COLOR)
-    c.drawString(col3, card_y + 8, "25515799")
-    c.drawString(col4, card_y + 8, "CZ25515799")
+    c.drawString(col3, card_y + 8, str(ico_val))
+    c.drawString(col4, card_y + 8, str(dic_val))
     
     # 4. DETAILED PRICE BREAKDOWN
     table_y = H - 380
@@ -1229,10 +1263,10 @@ def draw_page_6(c: canvas.Canvas, data: dict, assets_path: str):
     c.setFont("Roboto-Bold", 6)
     c.drawRightString(right_card_x + card_w - 15, bottom_y + 35, "ODHAD PO ODEČTENÍ DOTACE")
     
-    c.setFont("Roboto-Bold", 7)
+    c.setFont("Roboto-Bold", 9)
     c.setFillColor(colors.HexColor("#10b981"))
     discount_msg = f"Aplikována celková sleva: {format_czk(discount_amount)}"
-    c.drawRightString(right_card_x + card_w, bottom_y - 10, discount_msg)
+    c.drawRightString(right_card_x + card_w, bottom_y - 12, discount_msg)
     
     # 6. BANNER SECTION (FULL WIDTH BLACK BOTTOM)
     c.setFillColor(colors.HexColor("#060b13"))
@@ -1330,7 +1364,7 @@ def draw_page_7(c: canvas.Canvas, data: dict, assets_path: str):
     c.drawString(40, H - 85, "Záruční podmínky a standardy kvality")
     
     # 3. MAIN CARD
-    card_h = 400
+    card_h = 440
     card_y = H - 120 - card_h
     card_w = W - 80
     
@@ -1477,7 +1511,7 @@ def draw_page_7(c: canvas.Canvas, data: dict, assets_path: str):
     
     c.setFont("Roboto-Bold", 9)
     c.setFillColor(ACCENT_COLOR)
-    c.drawCentredString(W / 2, f_y - 30, "Termín dodání dle dohody, připravenosti stanoviště a materiálu.")
+    c.drawCentredString(W / 2, f_y - 50, "Termín dodání dle dohody, připravenosti stanoviště a materiálu.")
     
     # Page num
     c.setFillColor(colors.HexColor("#475569"))
@@ -1498,7 +1532,7 @@ def draw_page_8(c: canvas.Canvas, data: dict, assets_path: str):
         c.drawImage(main_tree_path, 0, 0, width=W, height=H, preserveAspectRatio=False)
     
     # Moderate overlay so text is readable but tree is visible
-    c.setFillColor(colors.Color(0.06, 0.08, 0.12, alpha=0.4))
+    c.setFillColor(colors.Color(0.06, 0.08, 0.12, alpha=0.75))
     c.rect(0, 0, W, H, fill=1, stroke=0)
     c.restoreState()
     

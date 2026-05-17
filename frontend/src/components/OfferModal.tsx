@@ -69,6 +69,7 @@ export default function OfferModal({ result, location, energyCost, web3Enabled, 
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isGenerating, setIsGenerating] = useState(false);
     const [ico, setIco] = useState('');
+    const [dic, setDic] = useState('');
     const [isFetchingIco, setIsFetchingIco] = useState(false);
 
     const handleIcoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -79,6 +80,7 @@ export default function OfferModal({ result, location, energyCost, web3Enabled, 
         if (newVal.length > 0 && newVal.length < 8) {
             setClientName('');
             setClientAddress('');
+            setDic('');
         }
 
         // Exact 8-digit IČO search
@@ -89,6 +91,8 @@ export default function OfferModal({ result, location, energyCost, web3Enabled, 
                 if (response.ok) {
                     const data = await response.json();
                     if (data.obchodniJmeno) setClientName(data.obchodniJmeno);
+                    if (data.dic) setDic(data.dic);
+                    else setDic(`CZ${newVal}`);
 
                     let bestAddress = data.sidlo?.textovaAdresa;
                     if (data.dalsiUdaje && Array.isArray(data.dalsiUdaje)) {
@@ -147,6 +151,8 @@ export default function OfferModal({ result, location, energyCost, web3Enabled, 
                 body: JSON.stringify({
                     clientName,
                     clientAddress,
+                    ico,
+                    dic,
                     result,
                     location,
                     energyCost,
