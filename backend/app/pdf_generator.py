@@ -824,6 +824,10 @@ def draw_page_5(c: canvas.Canvas, data: dict, assets_path: str):
     annualYield = float(result.get("annualSolarKwh", 0)) + float(result.get("annualWindKwh", 0))
     vyroba_mwh = "{:.2f}".format(annualYield / 1000.0).replace(".", ",")
     
+    from datetime import datetime
+    now = datetime.now()
+    today_str = f"{now.day}. {now.month}. {now.year}"
+    
     # Fonts & Colors
     TEXT_COLOR = colors.white
     MUTED_COLOR = colors.HexColor("#94a3b8")
@@ -862,7 +866,7 @@ def draw_page_5(c: canvas.Canvas, data: dict, assets_path: str):
     
     c.setFont("Roboto", 9)
     c.setFillColor(MUTED_COLOR)
-    c.drawString(40, H - 85, "Detailní technická specifikace | 2. 2. 2026")
+    c.drawString(40, H - 85, f"Detailní technická specifikace | {today_str}")
     
     # 3. DIAGRAM ZTRÁT SYSTÉMU (Waterfall)
     card1_y = H - 540
@@ -1026,6 +1030,10 @@ def draw_page_5(c: canvas.Canvas, data: dict, assets_path: str):
 def draw_page_6(c: canvas.Canvas, data: dict, assets_path: str):
     result = data.get("result", {})
     
+    from datetime import datetime
+    now = datetime.now()
+    today_str = f"{now.day}. {now.month}. {now.year}"
+    
     # Fonts & Colors
     TEXT_COLOR = colors.white
     MUTED_COLOR = colors.HexColor("#94a3b8")
@@ -1108,7 +1116,7 @@ def draw_page_6(c: canvas.Canvas, data: dict, assets_path: str):
     
     c.setFont("Roboto", 9)
     c.setFillColor(MUTED_COLOR)
-    c.drawString(40, H - 85, "Vystaveno: 2. 2. 2026")
+    c.drawString(40, H - 85, f"Vystaveno: {today_str}")
     
     import base64
     client_logo_b64 = data.get("clientLogoBase64")
