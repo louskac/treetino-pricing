@@ -81,10 +81,10 @@ def draw_page_3_combined(c: canvas.Canvas, data: dict, assets_path: str):
         if pins:
             center_lat = sum(p["lat"] for p in pins) / len(pins)
             center_lon = sum(p["lng"] for p in pins) / len(pins)
-            zoom = 18.0
+            zoom = 19.0
         else:
             center_lat, center_lon = 50.088, 14.42
-            zoom = 18.0
+            zoom = 19.0
         
         token = data.get("mapboxToken", "")
         if not token:
@@ -98,23 +98,78 @@ def draw_page_3_combined(c: canvas.Canvas, data: dict, assets_path: str):
         map_image_path = os.path.join(assets_path, "products", "top_view.png")
         if not os.path.exists(map_image_path): map_image_path = os.path.join(assets_path, "top_view.png")
         if os.path.exists(map_image_path):
+            img_w, img_h = img.size
+            # Mapbox base tile size at scale 1 is 512 px. Since we request @2x, it is 512 * (img_w / sw) = 1024 px.
+            physical_tile_size = 512 * (img_w / sw)
+            
+            # Tree is 17 meters wide
+            meters_per_pixel = (40075016.686 * math.cos(math.radians(center_lat))) / (physical_tile_size * (2 ** zoom))
+            pixels_per_meter = 1 / meters_per_pixel if meters_per_pixel > 0 else 1
+            tree_size = max(10, int(17 * pixels_per_meter))
+            
             tree_icon = Image.open(map_image_path).convert("RGBA")
-            tree_size = 120
             tree_icon = tree_icon.resize((tree_size, tree_size), Image.Resampling.LANCZOS)
+            
             def latlon_to_pixels(lon, lat, z):
                 n = 2.0 ** z
-                x = (lon + 180.0) / 360.0 * n * 512
-                y = (1.0 - math.log(math.tan(math.radians(lat)) + (1.0 / math.cos(math.radians(lat)))) / math.pi) / 2.0 * n * 512
+                x = (lon + 180.0) / 360.0 * n * physical_tile_size
+                y = (1.0 - math.log(math.tan(math.radians(lat)) + (1.0 / math.cos(math.radians(lat)))) / math.pi) / 2.0 * n * physical_tile_size
                 return x, y
+                
             mcx, mcy = latlon_to_pixels(center_lon, center_lat, zoom)
             from PIL import ImageDraw
+            
+            # Draw glowing highlight overlays
+            overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
+            draw_overlay = ImageDraw.Draw(overlay)
+            
             for p in pins:
                 px, py = latlon_to_pixels(p["lng"], p["lat"], zoom)
-                ix = int(sw + (px - mcx) * 2) - tree_size // 2
-                iy = int(sh + (py - mcy) * 2) - tree_size // 2
-                draw = ImageDraw.Draw(img)
-                draw.ellipse([ix - 4, iy - 4, ix + tree_size + 4, iy + tree_size + 4], outline="#38bdf8", width=4)
+                ix = int(img_w / 2 + (px - mcx)) - tree_size // 2
+                iy = int(img_h / 2 + (py - mcy)) - tree_size // 2
+                
+                # Center point of the tree pin
+                cx = ix + tree_size // 2
+                cy = iy + tree_size // 2
+                
+                # 1. Semi-transparent cyan spotlight glow
+                glow_r = (tree_size // 2) + 24
+                draw_overlay.ellipse(
+                    [cx - glow_r, cy - glow_r, cx + glow_r, cy + glow_r],
+                    fill=(56, 189, 248, 30),  # #38bdf8 with ~12% opacity
+                    outline=None
+                )
+                
+                # 2. Outer thin target ring
+                outer_r = glow_r
+                draw_overlay.ellipse(
+                    [cx - outer_r, cy - outer_r, cx + outer_r, cy + outer_r],
+                    outline=(56, 189, 248, 120),  # ~47% opacity
+                    width=2
+                )
+                
+                # 3. Inner solid highlight ring
+                inner_r = (tree_size // 2) + 6
+                draw_overlay.ellipse(
+                    [cx - inner_r, cy - inner_r, cx + inner_r, cy + inner_r],
+                    outline=(56, 189, 248, 255),  # Opaque cyan
+                    width=4
+                )
+                
+                # 4. Target locator crosshair ticks
+                tick_len = 8
+                # Top tick
+                draw_overlay.line([cx, cy - outer_r - 2, cx, cy - outer_r + tick_len], fill=(56, 189, 248, 200), width=3)
+                # Bottom tick
+                draw_overlay.line([cx, cy + outer_r + 2, cx, cy + outer_r - tick_len], fill=(56, 189, 248, 200), width=3)
+                # Left tick
+                draw_overlay.line([cx - outer_r - 2, cy, cx - outer_r + tick_len, cy], fill=(56, 189, 248, 200), width=3)
+                # Right tick
+                draw_overlay.line([cx + outer_r + 2, cy, cx + outer_r - tick_len, cy], fill=(56, 189, 248, 200), width=3)
+                
                 img.paste(tree_icon, (ix, iy), tree_icon)
+                
+            img = Image.alpha_composite(img, overlay)
         
         final_io = io.BytesIO()
         img.convert("RGB").save(final_io, format="JPEG", quality=90)

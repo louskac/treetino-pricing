@@ -50,21 +50,21 @@ const BACKEND_URL = import.meta.env.PROD ? '/api' : 'http://localhost:8000';
 const PRODUCT_DATA = [
   {
     id: 'main-tree',
-    name: 'Hlavní Energetický Strom',
+    name: 'Treetino V1',
     description: '300 solárních listů + integrovaný vítr',
     image: '/products/strom1.png',
     investment: 5000000
   },
   {
     id: 'small-tree',
-    name: 'Malý Strom Prototyp',
+    name: 'Treetino V2',
     description: '180 solárních listů — Předobjednávka',
     image: '/products/strom3.png',
     investment: 1500000
   },
   {
     id: 'standalone-turbine',
-    name: 'Střešní Turbíny',
+    name: 'Turbine T1',
     description: 'Tichá transparentní větrná technologie',
     image: '/products/strom2.png',
     investment: 0 // Calculated based on roof area
@@ -279,7 +279,7 @@ export default function App() {
                   </div>
                   <div className="relative z-10 p-3 h-full flex flex-col justify-end">
                     <div className={`text-sm font-semibold transition-colors ${textClass}`}>
-                      {pd.name.split(' ')[0]}
+                      {pd.name}
                     </div>
                   </div>
                 </motion.button>
@@ -315,12 +315,14 @@ export default function App() {
         {/* Sliders */}
         <div className="space-y-4">
           <div className="space-y-2 pb-2 border-b border-slate-700/50">
-            <div className="flex justify-between items-end">
-              <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest leading-none flex items-center gap-2">
-                <MapPin className="w-3 h-3 text-treetino-light" /> Extrahované jednotky z mapy
-              </label>
-              <span className="text-sm font-bold text-white leading-none">{unitCount}x Systém</span>
-            </div>
+              <div className="flex justify-between items-end">
+                <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest leading-none flex items-center gap-2">
+                  <MapPin className="w-3 h-3 text-treetino-light" /> Extrahované jednotky z mapy
+                </label>
+                <span className="text-sm font-bold text-white leading-none">
+                  {unitCount}x {product === 'main-tree' ? 'V1' : product === 'small-tree' ? 'V2' : 'T1'}
+                </span>
+              </div>
           </div>
 
           <div className="space-y-2">

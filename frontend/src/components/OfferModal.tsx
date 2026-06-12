@@ -295,7 +295,7 @@ export default function OfferModal({ result, location, energyCost, web3Enabled, 
                                     <APIProvider apiKey={GOOGLE_MAPS_API_KEY} libraries={['marker', 'maps3d', 'places']} version="alpha">
                                         <Map
                                             defaultCenter={{ lat: activePins[0].lat, lng: activePins[0].lng }}
-                                            defaultZoom={18}
+                                            defaultZoom={19}
                                             mapId={GOOGLE_MAP_ID}
                                             mapTypeId="satellite"
                                             disableDefaultUI={true}
@@ -303,18 +303,31 @@ export default function OfferModal({ result, location, energyCost, web3Enabled, 
                                             style={{ width: '100%', height: '100%' }}
                                         >
                                             {activePins.map((p, idx) => {
-                                                // Calculate pixels per meter at zoom level 18
-                                                const metersPerPixel = (40075016.686 * Math.cos(p.lat * Math.PI / 180)) / (256 * Math.pow(2, 18));
+                                                // Calculate pixels per meter at zoom level 19
+                                                const metersPerPixel = (40075016.686 * Math.cos(p.lat * Math.PI / 180)) / (256 * Math.pow(2, 19));
                                                 const treePixels = 17 / metersPerPixel;
                                                 
                                                 return (
                                                     <AdvancedMarker key={idx} position={{ lat: p.lat, lng: p.lng }}>
-                                                        <img 
-                                                            src="/top_view.png" 
-                                                            alt="Tree Instance" 
-                                                            style={{ width: `${treePixels}px`, height: `${treePixels}px` }}
-                                                            className="object-contain drop-shadow-2xl translate-y-[50%]" 
-                                                        />
+                                                        <div 
+                                                            style={{ 
+                                                                width: `${treePixels}px`, 
+                                                                height: `${treePixels}px`,
+                                                                position: 'relative'
+                                                            }}
+                                                            className="-translate-y-1/2 flex items-center justify-center"
+                                                        >
+                                                            {/* Glowing target rings on the map */}
+                                                            <div className="absolute inset-0 rounded-full border-[3px] border-[#38bdf8] shadow-[0_0_15px_#38bdf8] animate-pulse" style={{ transform: 'scale(1.2)' }} />
+                                                            <div className="absolute inset-0 rounded-full border border-[#38bdf8]/50" style={{ transform: 'scale(1.6)' }} />
+                                                            
+                                                            <img 
+                                                                src="/top_view.png" 
+                                                                alt="Tree Instance" 
+                                                                style={{ width: '100%', height: '100%' }}
+                                                                className="object-contain drop-shadow-2xl relative z-10" 
+                                                            />
+                                                        </div>
                                                     </AdvancedMarker>
                                                 );
                                             })}
@@ -437,7 +450,7 @@ export default function OfferModal({ result, location, energyCost, web3Enabled, 
                         {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
                         <span className="font-medium text-sm">
                             {location.pins.some(p => p.type !== 'main-tree')
-                                ? 'Pouze pro V1 Strom'
+                                ? 'Pouze pro Treetino V1'
                                 : (isGenerating ? 'Generuji...' : 'Generovat PDF Nabídku')}
                         </span>
                     </button>

@@ -60,6 +60,10 @@ def calculate_roi(params: CalculatorParams, solar_data: Dict, wind_data: Dict) -
     installation_height = params.buildingHeight or 0
     total_units = max(1, sum(params.productCounts.values()))
 
+    total_cap_kwp = 0.0
+    total_rated_wind_kw = 0.0
+    dc_power_kw = 0.0
+
     for p_type, count in params.productCounts.items():
         if count <= 0: continue
         specs = ProductSpecs.SPECS.get(p_type, ProductSpecs.SPECS['main-tree'])
@@ -67,46 +71,32 @@ def calculate_roi(params: CalculatorParams, solar_data: Dict, wind_data: Dict) -
         active_leaves += specs['leaves'] * count
         if p_type == 'standalone-turbine':
             active_turbines += count
+            total_rated_wind_kw += count * specs['turbinePowerKw']
+            dc_power_kw += (count * specs['turbinePowerKw'])
         else:
             active_turbines += specs['turbines'] * count
+            total_rated_wind_kw += specs['turbines'] * count * specs['turbinePowerKw']
+            dc_power_kw += (specs['leaves'] * count * specs['leafPowerW'] / 1000.0) + (specs['turbines'] * count * specs['turbinePowerKw'])
             
+        total_cap_kwp += (specs['leaves'] * count * specs['leafPowerW']) / 1000.0
         investment_czk += specs['baseInvestment'] * count
         if specs['height'] > installation_height:
             installation_height = specs['height']
 
     # 2. Solar Calculation
     solar_yield_factor = solar_data['outputs']['totals']['fixed']['E_y']
-    total_cap_kwp = (active_leaves * specs['leafPowerW']) / 1000.0
-
     solar_scaling = params.sunnyDays / 200.0
     annual_solar_kwh = total_cap_kwp * solar_yield_factor * solar_scaling
     if params.aiOptimization:
         annual_solar_kwh *= 1.30
 
     # 3. Wind Calculation (Annual)
-    # We use the forecast part of the data (future 7 days) as a proxy for annual average
-    # or just use the whole dataset if it's representative.
-    # Open-Meteo returns 14 days (7 past + 7 forecast) if past_days=7 and forecast_days=7
-    hourly_speeds = wind_data['hourly']['wind_speed_10m']
-    avg_v_10m = sum(hourly_speeds) / len(hourly_speeds)
-    adjusted_avg_v = adjust_wind_speed(avg_v_10m, 10, installation_height)
-
-    rated_speed = 12.0
-    speed_factor = min(1.0, math.pow(adjusted_avg_v / rated_speed, 3))
-
     total_op_hours = params.windyDays * params.windHours
-    annual_wind_kwh = active_turbines * specs['turbinePowerKw'] * total_op_hours
+    annual_wind_kwh = total_rated_wind_kw * total_op_hours
     
     # 3b. Past Week Production Calculation
-    # First 168 hours (7 days) are historical
-    past_week_speeds = hourly_speeds[:168]
-    past_week_avg_v = sum(past_week_speeds) / len(past_week_speeds)
-    past_week_adjusted_v = adjust_wind_speed(past_week_avg_v, 10, installation_height)
-    past_week_speed_factor = min(1.0, math.pow(past_week_adjusted_v / rated_speed, 3))
-    
-    # Assuming the device was active selama windyHours per day in the past week
     past_week_op_hours = 7 * params.windHours 
-    last_week_wind_kwh = active_turbines * specs['turbinePowerKw'] * past_week_op_hours
+    last_week_wind_kwh = total_rated_wind_kw * past_week_op_hours
     
     # Solar past week (simplified: 7/365 of annual scaling)
     last_week_solar_kwh = annual_solar_kwh * (7 / 365.0)
@@ -153,7 +143,6 @@ def calculate_roi(params: CalculatorParams, solar_data: Dict, wind_data: Dict) -
     roi = (combined_annual_revenue / final_price) * 100 if final_price > 0 else 0
     payback_period = final_price / (combined_annual_revenue if combined_annual_revenue > 0 else 1)
     
-    dc_power_kw = (active_leaves * specs['leafPowerW'] / 1000.0) + (active_turbines * specs['turbinePowerKw'])
     ac_power_kw = round(dc_power_kw * 0.9068, 2)
     co2_savings = round((annual_solar_kwh + annual_wind_kwh) * 0.00025, 2)
     trees_equivalent = round((annual_solar_kwh + annual_wind_kwh) * 0.0115)
