@@ -315,7 +315,7 @@ export default function OfferModal({ result, location, energyCost, web3Enabled, 
                                                                 height: `${treePixels}px`,
                                                                 position: 'relative'
                                                             }}
-                                                            className="-translate-y-1/2 flex items-center justify-center"
+                                                            className="translate-y-1/2 flex items-center justify-center"
                                                         >
                                                             {/* Glowing target rings on the map */}
                                                             <div className="absolute inset-0 rounded-full border-[3px] border-[#38bdf8] shadow-[0_0_15px_#38bdf8] animate-pulse" style={{ transform: 'scale(1.2)' }} />
