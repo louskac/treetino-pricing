@@ -16,14 +16,16 @@ import {
   Ruler,
   Sparkles,
   ArrowRight,
+  Briefcase
 } from 'lucide-react';
 
-import type { SelectedLocation, ProductType, CalcResult } from './types';
+import type { SelectedLocation, ProductType, CalcResult, Partner, Deal, User } from './types';
 import { runQuickScan } from './api';
-import type { CalculatorParams } from './calculator';
 import MapCanvas from './components/MapCanvas';
 import AnalyticsPanel from './components/AnalyticsPanel';
 import OfferModal from './components/OfferModal';
+import CrmPanel from './components/CrmPanel';
+import LoginScreen from './components/LoginScreen';
 // @ts-ignore
 import RotatingText from './components/reactbits/RotatingText/RotatingText';
 // @ts-ignore
@@ -72,7 +74,7 @@ const PRODUCT_DATA = [
 ];
 
 export default function App() {
-  // ─── State ────────────────────────────────────────────
+  // ─── Location & Slider Configuration ──────────────────
   const [location, setLocation] = useState<SelectedLocation | null>(null);
   const [product, setProduct] = useState<ProductType>('main-tree');
   const [unitCount, setUnitCount] = useState(1);
@@ -88,6 +90,66 @@ export default function App() {
   const [buildingConsumption, setBuildingConsumption] = useState(360);
   const [discount, setDiscount] = useState(5.0);
 
+  // ─── CRM & Partner Portal State ───────────────────────
+  const [crmActive, setCrmActive] = useState(false);
+  const [activeUser, setActiveUser] = useState<User | null>(null);
+  
+  // All deals in database (for map overlay pins)
+  const [allDeals, setAllDeals] = useState<Deal[]>([]);
+  const [activeDeal, setActiveDeal] = useState<Deal | null>(null);
+
+  // ─── Load Session from localStorage ──────────────────
+  useEffect(() => {
+    const cachedUserObj = localStorage.getItem('treetino_user');
+    
+    if (cachedUserObj) {
+      try {
+        setActiveUser(JSON.parse(cachedUserObj));
+        setCrmActive(true); // Auto-open CRM portal
+      } catch (e) {
+        console.error('Failed to parse cached session', e);
+      }
+    }
+  }, []);
+
+  // ─── Fetch All Deals ──────────────────────────────────
+  const fetchAllDeals = async () => {
+    if (!activeUser) return;
+    try {
+      const { data } = await axios.get<Deal[]>(`${BACKEND_URL}/deals`);
+      setAllDeals(data);
+      if (activeDeal) {
+        const updatedActive = data.find(d => d.id === activeDeal.id);
+        if (updatedActive) {
+          setActiveDeal(updatedActive);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to fetch all deals', e);
+    }
+  };
+
+  useEffect(() => {
+    fetchAllDeals();
+  }, [activeUser]);
+
+  // ─── Login Handler ───────────────────────────────────
+  const handleLogin = (user: User) => {
+    setActiveUser(user);
+    localStorage.setItem('treetino_user', JSON.stringify(user));
+    setCrmActive(true);
+  };
+
+  // ─── Logout Handler ──────────────────────────────────
+  const handleLogout = () => {
+    setActiveUser(null);
+    setActiveDeal(null);
+    setLocation(null);
+    setResult(null);
+    localStorage.removeItem('treetino_user');
+    setCrmActive(false);
+  };
+
   // ─── Auto-update Unit Count ────────────
   useEffect(() => {
     if (location?.pins && location.pins.length > 0) {
@@ -96,6 +158,16 @@ export default function App() {
       setUnitCount(0);
     }
   }, [location]);
+
+  // ─── Enforce User Tier Discount Limits ────────────
+  useEffect(() => {
+    if (activeUser) {
+      const maxD = activeUser.tier === 'Silver' ? 10 : activeUser.tier === 'Gold' ? 20 : 30;
+      if (discount > maxD) {
+        setDiscount(maxD);
+      }
+    }
+  }, [activeUser, discount]);
 
   const [web3Enabled, setWeb3Enabled] = useState(false);
   const [esgEnabled, setEsgEnabled] = useState(true);
@@ -128,6 +200,39 @@ export default function App() {
     return () => { isMounted = false; };
   }, [location]);
 
+  // ─── Deal Loader Handler ──────────────────────────────
+  const handleSelectDeal = useCallback((deal: Deal | null) => {
+    setActiveDeal(deal);
+    if (!deal) return;
+    
+    if (deal.config) {
+      const cfg = deal.config;
+      setEnergyCost(cfg.energy_price);
+      setSunnyDays(cfg.sunny_days);
+      setWindyDays(cfg.windy_days);
+      setWindHours(cfg.wind_hours);
+      setAiOptimization(cfg.ai_optimization === 1);
+      setWeb3Enabled(cfg.web3_enabled === 1);
+      setBuildingConsumption(cfg.building_consumption);
+      setDiscount(cfg.discount);
+      
+      try {
+        const pins = JSON.parse(cfg.pins_json);
+        setLocation({
+          lat: cfg.lat,
+          lon: cfg.lon,
+          pins: pins,
+          potential: undefined
+        });
+      } catch (err) {
+        console.error('Failed to parse saved pins json', err);
+      }
+    } else {
+      setLocation(null);
+      setResult(null);
+    }
+  }, []);
+
   const handleCalculate = async () => {
     if (!location) return;
     setLoading(true);
@@ -138,10 +243,13 @@ export default function App() {
           return acc;
       }, {} as Record<string, number>);
 
-      // Add default 1 if empty pins to at least compute the selected product
       if (Object.keys(productCounts).length === 0) {
           productCounts[product] = 1;
       }
+
+      let commissionRate = 5.0;
+      if (activeUser?.tier === 'Gold') commissionRate = 8.0;
+      else if (activeUser?.tier === 'Platinum') commissionRate = 12.0;
 
       const calcParams = {
         productCounts,
@@ -157,7 +265,8 @@ export default function App() {
         heliumHotspots,
         buildingHeight: 0,
         buildingConsumption,
-        discount
+        discount,
+        partnerCommissionRate: commissionRate
       };
 
       const { data } = await axios.post<CalcResult>(`${BACKEND_URL}/calculate-roi`, {
@@ -176,10 +285,16 @@ export default function App() {
   };
 
   const annualSavings = result ? result.totalAnnualRevenue : 0;
+  const maxDiscount = activeUser ? (activeUser.tier === 'Silver' ? 10 : activeUser.tier === 'Gold' ? 20 : 30) : 30;
+
+  // ─── Show Login Screen if not authenticated yet ─────
+  if (!activeUser) {
+    return <LoginScreen onLogin={handleLogin} />;
+  }
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-slate-950 font-sans text-white">
-      {/* 1. MAP */}
+      {/* 1. MAP CANVAS */}
       <MapCanvas
         onLocationSelect={handleLocationSelect}
         selectedLocation={location}
@@ -188,12 +303,14 @@ export default function App() {
           setLocation(prev => prev ? { ...prev, pins } : null);
         }}
         product={product}
+        allDeals={allDeals}
+        activeDeal={activeDeal}
+        onMapClick={() => setCrmActive(false)}
       />
 
-      {/* 2. TOP BAR & CONTROLS */}
+      {/* 2. TOP BAR & PORTAL CONTROLS */}
       <div className="absolute top-0 left-0 right-0 z-30 flex items-start justify-between px-8 py-6 pointer-events-none">
         {/* Unified Branding Plate */}
-        {/* Action Group - Unified Branding Plate */}
         <div className="flex items-center gap-6 pointer-events-auto neo-glass-plate px-6 py-4">
           <img src="/branding/logo_horizontal.png" alt="Treetino Logo" className="h-8 w-auto filter brightness-0 invert" />
           <div className="h-8 w-px bg-slate-700" />
@@ -205,6 +322,21 @@ export default function App() {
             />
             <span className="text-[10px] text-treetino-light font-bold">V2.0 PRO</span>
           </div>
+        </div>
+
+        {/* CRM / Partner Portal Toggle Button */}
+        <div className="pointer-events-auto">
+          <button
+            onClick={() => setCrmActive(!crmActive)}
+            className={`neo-glass-plate px-5 py-3.5 flex items-center gap-2 text-xs font-semibold tracking-wider transition-all duration-300 ${
+              crmActive 
+                ? 'border-treetino-light/70 shadow-[0_0_15px_rgba(88,204,168,0.25)] text-treetino-light' 
+                : 'border-slate-800 hover:border-slate-600 text-slate-300'
+            }`}
+          >
+            <Briefcase className="w-4 h-4" />
+            {crmActive ? 'ZAVŘÍT PARTNER PORTÁL' : 'PARTNER PORTÁL'}
+          </button>
         </div>
       </div>
 
@@ -225,159 +357,186 @@ export default function App() {
         </AnimatePresence>
       </div>
 
-      {/* 3. COMMAND CENTER */}
+      {/* 3. COMMAND CENTER / SIDE PANEL */}
       <motion.aside
         initial={{ x: 100, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
         transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
         className="absolute top-24 right-8 bottom-8 w-96 z-40 neo-panel p-6 flex flex-col gap-6 overflow-y-auto"
       >
-        <div className="space-y-1 bg-slate-900 -mx-6 -mt-6 p-6 rounded-t-xl border-b border-slate-700/50">
-          <h2 className="text-xl font-semibold text-white">Konfigurace</h2>
-          <div className="h-1 w-12 bg-treetino-light mt-2 rounded-full" />
-        </div>
-
-        {/* Product Selection Horizontal Grid */}
-        <div className="space-y-4">
-          <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-2">
-            <Zap className="w-3.5 h-3.5 text-treetino-light" /> 01 — Výběr Jednotky
-          </label>
-          <div className="grid grid-cols-3 gap-2">
-            {PRODUCT_DATA.map((pd) => {
-              const isSelected = product === pd.id;
-              let borderClass = 'border-treetino-light/30 hover:border-treetino-light/60';
-              let textClass = 'text-slate-300 group-hover:text-treetino-light';
-              let bgClass = 'bg-slate-800/80';
-              
-              if (pd.id === 'small-tree') {
-                borderClass = isSelected ? 'border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.4)]' : 'border-yellow-500/30 hover:border-yellow-500/60';
-                textClass = isSelected ? 'text-yellow-500' : 'text-slate-300 group-hover:text-yellow-400';
-                bgClass = isSelected ? 'bg-yellow-500/20' : 'bg-slate-800/80';
-              } else if (pd.id === 'standalone-turbine') {
-                borderClass = isSelected ? 'border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.4)]' : 'border-blue-500/30 hover:border-blue-500/60';
-                textClass = isSelected ? 'text-blue-500' : 'text-slate-300 group-hover:text-blue-400';
-                bgClass = isSelected ? 'bg-blue-500/20' : 'bg-slate-800/80';
-              } else {
-                borderClass = isSelected ? 'border-[#58cca8] shadow-[0_0_15px_rgba(88,204,168,0.4)]' : 'border-[#58cca8]/30 hover:border-[#58cca8]/60';
-                textClass = isSelected ? 'text-[#58cca8]' : 'text-slate-300 group-hover:text-[#58cca8]';
-                bgClass = isSelected ? 'bg-[#58cca8]/20' : 'bg-slate-800/80';
-              }
-
-              return (
-                <motion.button
-                  key={pd.id}
-                  whileHover={{ y: -4 }}
-                  onClick={() => {
-                    setProduct(pd.id as ProductType);
-                    setResult(null);
-                  }}
-                  className={`relative group overflow-hidden h-28 text-left transition-all rounded-2xl border-2 ${borderClass} ${bgClass}`}
-                >
-                  <div className="absolute inset-0 z-0">
-                    <img src={pd.image} alt={pd.name} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity mix-blend-screen" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/50 to-transparent" />
-                  </div>
-                  <div className="relative z-10 p-3 h-full flex flex-col justify-end">
-                    <div className={`text-sm font-semibold transition-colors ${textClass}`}>
-                      {pd.name}
-                    </div>
-                  </div>
-                </motion.button>
-              );
-            })}
+        <div className="space-y-1 bg-slate-900 -mx-6 -mt-6 p-6 rounded-t-xl border-b border-slate-700/50 flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-semibold text-white">
+              {crmActive ? 'Partner Portál' : 'Konfigurace'}
+            </h2>
+            <div className="h-1 w-12 bg-treetino-light mt-2 rounded-full" />
           </div>
-        </div>
-
-        {/* Context Card */}
-        {location && (
-          <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/50 space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-treetino-light" />
-                <span className="text-xs font-semibold text-white uppercase tracking-wider">Analýza Lokality</span>
-              </div>
-              <span className="text-[10px] font-mono font-bold text-slate-400">{location.lat.toFixed(4)}, {location.lon.toFixed(4)}</span>
+          {crmActive && activeUser && (
+            <div className="text-right flex flex-col">
+              <span className="text-[10px] font-mono text-treetino-light uppercase tracking-wider">{activeUser.tier} TIER</span>
+              <span className="text-[9px] text-slate-400 font-mono mt-0.5">{activeUser.partner_name || 'Nezávislý'}</span>
             </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <span className="text-[10px] text-slate-400 font-semibold uppercase">Solární potenciál</span>
-                <div className="text-lg font-bold text-white">{location.potential ? `${location.potential.solarIndex}%` : '--'}</div>
-              </div>
-              <div className="space-y-1">
-                <span className="text-[10px] text-slate-400 font-semibold uppercase">Rychlost větru</span>
-                <div className="text-lg font-bold text-white">{location.potential ? `${location.potential.avgWindSpeed}m/s` : '--'}</div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Sliders */}
-        <div className="space-y-4">
-          <div className="space-y-2 pb-2 border-b border-slate-700/50">
-              <div className="flex justify-between items-end">
-                <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest leading-none flex items-center gap-2">
-                  <MapPin className="w-3 h-3 text-treetino-light" /> Extrahované jednotky z mapy
-                </label>
-                <span className="text-sm font-bold text-white leading-none">
-                  {unitCount}x {product === 'main-tree' ? 'V1' : product === 'small-tree' ? 'V2' : 'T1'}
-                </span>
-              </div>
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex justify-between items-end">
-              <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest leading-none">Cena za kWh</label>
-              <span className="text-sm font-bold text-white leading-none">{energyCost.toFixed(2)} CZK</span>
-            </div>
-            <input type="range" min={1.00} max={15.00} step={0.1} value={energyCost}
-              onChange={(e) => setEnergyCost(parseFloat(e.target.value))}
-              className="w-full h-1.5 bg-slate-700 rounded-full appearance-none cursor-pointer accent-treetino-light" />
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex justify-between items-end">
-              <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest leading-none">Spotřeba</label>
-              <span className="text-sm font-bold text-white leading-none">{buildingConsumption} MWh</span>
-            </div>
-            <input type="range" min={10} max={5000} step={10} value={buildingConsumption}
-              onChange={(e) => setBuildingConsumption(parseInt(e.target.value))}
-              className="w-full h-1.5 bg-slate-700 rounded-full appearance-none cursor-pointer accent-treetino-light" />
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex justify-between items-end">
-              <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest leading-none">Sleva</label>
-              <span className="text-sm font-bold text-white leading-none">{discount.toFixed(1)}%</span>
-            </div>
-            <input type="range" min={0} max={30} step={0.5} value={discount}
-              onChange={(e) => setDiscount(parseFloat(e.target.value))}
-              className="w-full h-1.5 bg-slate-700 rounded-full appearance-none cursor-pointer accent-treetino-light" />
-          </div>
-        </div>
-
-        {/* Toggles */}
-
-
-        <div className="flex-1 min-h-[1rem]" />
-
-        {/* ROI Results Bar */}
-        <AnimatePresence>
-
-        </AnimatePresence>
-
-        {/* Calculate Button */}
-        <button
-          onClick={handleCalculate}
-          disabled={!location || loading}
-          className="neo-btn-primary flex items-center justify-center gap-2 group"
-        >
-          {loading ? (
-            <><Loader2 className="w-4 h-4 animate-spin" />Analyzuji...</>
-          ) : (
-            <>Spočítat návratnost</>
           )}
-        </button>
+        </div>
+
+        {crmActive ? (
+          <CrmPanel
+            activeUser={activeUser}
+            onLogout={handleLogout}
+            activeDeal={activeDeal}
+            onSelectDeal={handleSelectDeal}
+            currentResult={result}
+            currentLocation={location}
+            energyCost={energyCost}
+            sunnyDays={sunnyDays}
+            windyDays={windyDays}
+            windHours={windHours}
+            aiOptimization={aiOptimization}
+            web3Enabled={web3Enabled}
+            buildingConsumption={buildingConsumption}
+            discount={discount}
+            deals={allDeals.filter(d => d.user_id === activeUser.id)}
+            onRefreshDeals={fetchAllDeals}
+          />
+        ) : (
+          <>
+            {/* Product Selection Horizontal Grid */}
+            <div className="space-y-4">
+              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                <Zap className="w-3.5 h-3.5 text-treetino-light" /> 01 — Výběr Jednotky
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {PRODUCT_DATA.map((pd) => {
+                  const isSelected = product === pd.id;
+                  let borderClass = 'border-treetino-light/30 hover:border-treetino-light/60';
+                  let textClass = 'text-slate-300 group-hover:text-treetino-light';
+                  let bgClass = 'bg-slate-800/80';
+                  
+                  if (pd.id === 'small-tree') {
+                    borderClass = isSelected ? 'border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.4)]' : 'border-yellow-500/30 hover:border-yellow-500/60';
+                    textClass = isSelected ? 'text-yellow-500' : 'text-slate-300 group-hover:text-yellow-400';
+                    bgClass = isSelected ? 'bg-yellow-500/20' : 'bg-slate-800/80';
+                  } else if (pd.id === 'standalone-turbine') {
+                    borderClass = isSelected ? 'border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.4)]' : 'border-blue-500/30 hover:border-blue-500/60';
+                    textClass = isSelected ? 'text-blue-500' : 'text-slate-300 group-hover:text-blue-400';
+                    bgClass = isSelected ? 'bg-blue-500/20' : 'bg-slate-800/80';
+                  } else {
+                    borderClass = isSelected ? 'border-[#58cca8] shadow-[0_0_15px_rgba(88,204,168,0.4)]' : 'border-[#58cca8]/30 hover:border-[#58cca8]/60';
+                    textClass = isSelected ? 'text-[#58cca8]' : 'text-slate-300 group-hover:text-[#58cca8]';
+                    bgClass = isSelected ? 'bg-[#58cca8]/20' : 'bg-slate-800/80';
+                  }
+
+                  return (
+                    <motion.button
+                      key={pd.id}
+                      whileHover={{ y: -4 }}
+                      onClick={() => {
+                        setProduct(pd.id as ProductType);
+                        setResult(null);
+                      }}
+                      className={`relative group overflow-hidden h-28 text-left transition-all rounded-2xl border-2 ${borderClass} ${bgClass}`}
+                    >
+                      <div className="absolute inset-0 z-0">
+                        <img src={pd.image} alt={pd.name} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity mix-blend-screen" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/50 to-transparent" />
+                      </div>
+                      <div className="relative z-10 p-3 h-full flex flex-col justify-end">
+                        <div className={`text-sm font-semibold transition-colors ${textClass}`}>
+                          {pd.name}
+                        </div>
+                      </div>
+                    </motion.button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Context Card */}
+            {location && (
+              <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/50 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-treetino-light" />
+                    <span className="text-xs font-semibold text-white uppercase tracking-wider">Analýza Lokality</span>
+                  </div>
+                  <span className="text-[10px] font-mono font-bold text-slate-400">{location.lat.toFixed(4)}, {location.lon.toFixed(4)}</span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <span className="text-[10px] text-slate-400 font-semibold uppercase">Solární potenciál</span>
+                    <div className="text-lg font-bold text-white">{location.potential ? `${location.potential.solarIndex}%` : '--'}</div>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-[10px] text-slate-400 font-semibold uppercase">Rychlost větru</span>
+                    <div className="text-lg font-bold text-white">{location.potential ? `${location.potential.avgWindSpeed}m/s` : '--'}</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Sliders */}
+            <div className="space-y-4">
+              <div className="space-y-2 pb-2 border-b border-slate-700/50">
+                  <div className="flex justify-between items-end">
+                    <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest leading-none flex items-center gap-2">
+                      <MapPin className="w-3 h-3 text-treetino-light" /> Extrahované jednotky z mapy
+                    </label>
+                    <span className="text-sm font-bold text-white leading-none">
+                      {unitCount}x {product === 'main-tree' ? 'V1' : product === 'small-tree' ? 'V2' : 'T1'}
+                    </span>
+                  </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between items-end">
+                  <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest leading-none">Cena za kWh</label>
+                  <span className="text-sm font-bold text-white leading-none">{energyCost.toFixed(2)} CZK</span>
+                </div>
+                <input type="range" min={1.00} max={15.00} step={0.1} value={energyCost}
+                  onChange={(e) => setEnergyCost(parseFloat(e.target.value))}
+                  className="w-full h-1.5 bg-slate-700 rounded-full appearance-none cursor-pointer accent-treetino-light" />
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between items-end">
+                  <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest leading-none">Spotřeba</label>
+                  <span className="text-sm font-bold text-white leading-none">{buildingConsumption} MWh</span>
+                </div>
+                <input type="range" min={10} max={5000} step={10} value={buildingConsumption}
+                  onChange={(e) => setBuildingConsumption(parseInt(e.target.value))}
+                  className="w-full h-1.5 bg-slate-700 rounded-full appearance-none cursor-pointer accent-treetino-light" />
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between items-end">
+                  <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest leading-none">
+                    Sleva {activeUser ? `(Tier Limit: ${maxDiscount}%)` : ''}
+                  </label>
+                  <span className="text-sm font-bold text-white leading-none">{discount.toFixed(1)}%</span>
+                </div>
+                <input type="range" min={0} max={maxDiscount} step={0.5} value={discount}
+                  onChange={(e) => setDiscount(parseFloat(e.target.value))}
+                  className="w-full h-1.5 bg-slate-700 rounded-full appearance-none cursor-pointer accent-treetino-light" />
+              </div>
+            </div>
+
+            <div className="flex-1 min-h-[1rem]" />
+
+            {/* Calculate Button */}
+            <button
+              onClick={handleCalculate}
+              disabled={!location || loading}
+              className="neo-btn-primary flex items-center justify-center gap-2 group"
+            >
+              {loading ? (
+                <><Loader2 className="w-4 h-4 animate-spin" />Analyzuji...</>
+              ) : (
+                <>Spočítat návratnost</>
+              )}
+            </button>
+          </>
+        )}
       </motion.aside>
 
       {/* 4. ANALYTICS BENTO GRID */}
@@ -392,8 +551,17 @@ export default function App() {
       {/* 5. OFFER MODAL */}
       <AnimatePresence>
         {showModal && result && location && (
-          <OfferModal result={result} location={location} energyCost={energyCost}
-            web3Enabled={web3Enabled} esgEnabled={esgEnabled} onClose={() => setShowModal(false)} />
+          <OfferModal 
+            result={result} 
+            location={location} 
+            energyCost={energyCost}
+            web3Enabled={web3Enabled} 
+            esgEnabled={esgEnabled} 
+            activeDeal={activeDeal}
+            activeUser={activeUser}
+            onRefreshDeals={fetchAllDeals}
+            onClose={() => setShowModal(false)} 
+          />
         )}
       </AnimatePresence>
     </div>

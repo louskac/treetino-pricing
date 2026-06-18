@@ -92,6 +92,7 @@ export interface ROIResult {
     futureCarbonRevenue: number;
     futureHeliumRevenue: number;
     totalFutureRevenue: number;
+    commissionForecast?: number;
 
     // Chart data
     monthlyData: { month: string; solar: number; wind: number; total: number }[];
@@ -118,4 +119,67 @@ export interface SelectedLocation {
     lon: number;
     potential?: SpotPotential;
     pins: PinLocation[];
+}
+
+// ─── CRM & Partner Portal Types ──────────────────────────
+export interface Partner {
+    id: number;
+    name: string;
+    tier: 'Silver' | 'Gold' | 'Platinum';
+    commission_rate: number;
+    email: string;
+}
+
+export interface User {
+    id: number;
+    username: string;
+    tier: 'Silver' | 'Gold' | 'Platinum';
+    partner_id?: number | null;
+    partner_name?: string | null;
+}
+
+export interface DealConfig {
+    id: number;
+    deal_id: number;
+    lat: number;
+    lon: number;
+    pins_json: string;
+    energy_price: number;
+    sunny_days: number;
+    windy_days: number;
+    wind_hours: number;
+    ai_optimization: number; // 0 or 1
+    web3_enabled: number;     // 0 or 1
+    building_consumption: number;
+    discount: number;
+    total_price: number;
+    commission_forecast: number;
+    pdf_path: string;
+}
+
+export interface Commission {
+    id: number;
+    deal_id: number;
+    partner_id: number;
+    amount_czk: number;
+    status: 'Forecasted' | 'Pending' | 'Paid' | 'Cancelled';
+    payout_date?: string;
+}
+
+export interface Deal {
+    id: number;
+    user_id: number;
+    partner_id: number;
+    client_name: string;
+    agent_name: string;
+    status: 'Prepared' | 'In Progress' | 'Stuck' | 'Rejected' | 'Won' | 'Lost';
+    ico?: string | null;
+    dic?: string | null;
+    client_logo?: string | null;
+    pdf_path?: string | null;
+    created_at: string;
+    updated_at: string;
+    config?: DealConfig | null;
+    commission?: Commission | null;
+    partner_name?: string;
 }

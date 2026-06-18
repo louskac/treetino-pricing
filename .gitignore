@@ -54,3 +54,12 @@ backend/venv/
 .env.development.local
 .env.test.local
 .env.production.local
+
+# database
+backend/db.sqlite
+
+# generated assets
+backend/static/
+output.pdf
+page3_test.png
+

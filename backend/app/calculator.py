@@ -46,6 +46,7 @@ class CalculatorParams(BaseModel):
     buildingHeight: Optional[float] = 0
     buildingConsumption: Optional[float] = 360 # MWh
     discount: Optional[float] = 5.0 # Percentage
+    partnerCommissionRate: Optional[float] = 5.0
 
 def adjust_wind_speed(v_ref: float, h_ref: float, target_h: float) -> float:
     if target_h <= 0:
@@ -63,10 +64,23 @@ def calculate_roi(params: CalculatorParams, solar_data: Dict, wind_data: Dict) -
     total_cap_kwp = 0.0
     total_rated_wind_kw = 0.0
     dc_power_kw = 0.0
+    
+    # Commission Calculation Logic (4% for main-tree, tier rate for others)
+    total_commission = 0.0
+    discount_factor = 1.0 - ((params.discount or 0.0) / 100.0)
+    partner_rate = params.partnerCommissionRate or 5.0
 
     for p_type, count in params.productCounts.items():
         if count <= 0: continue
         specs = ProductSpecs.SPECS.get(p_type, ProductSpecs.SPECS['main-tree'])
+        
+        # Base Investment for this product
+        base_invest = specs['baseInvestment'] * count
+        discounted_invest = base_invest * discount_factor
+        
+        # Commission rate logic
+        prod_rate = 4.0 if p_type == 'main-tree' else partner_rate
+        total_commission += discounted_invest * (prod_rate / 100.0)
         
         active_leaves += specs['leaves'] * count
         if p_type == 'standalone-turbine':
@@ -198,5 +212,6 @@ def calculate_roi(params: CalculatorParams, solar_data: Dict, wind_data: Dict) -
         "futureCarbonRevenue": round(future_carbon_revenue),
         "futureHeliumRevenue": round(future_helium_revenue),
         "totalFutureRevenue": round(total_future_revenue),
+        "commissionForecast": round(total_commission),
         "monthlyData": monthly_data
     }

@@ -260,3 +260,14 @@ div[style*="background-color: white"][style*="z-index: 1000001"],
 .pac-icon {
   filter: invert(0.8) sepia(1) saturate(3) hue-rotate(110deg) !important;
 }
+
+/* ─── Google Maps 3D Popover Theme Overrides ─────────── */
+gmp-popover {
+  background-color: rgba(15, 23, 42, 0.95) !important;
+  backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(148, 163, 184, 0.15) !important; /* Subtle slate border matching the portal panel */
+  border-radius: 24px !important;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6) !important;
+  padding: 0 !important;
+  color: #ffffff !important;
+}

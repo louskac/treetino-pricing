@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { X, Zap, FileText, Calendar, Shield, Globe, Download, Loader2, User, MapPin } from 'lucide-react';
-import type { CalcResult, SelectedLocation } from '../types';
+import axios from 'axios';
 import { APIProvider, Map, AdvancedMarker } from '@vis.gl/react-google-maps';
+import type { CalcResult, SelectedLocation, Deal, Partner, User as UserType } from '../types';
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string || '';
 const GOOGLE_MAP_ID = import.meta.env.VITE_GOOGLE_MAP_ID as string || 'DEMO_MAP_ID';
+const BACKEND_URL = import.meta.env.PROD ? '/api' : 'http://localhost:8000';
 
 interface Props {
     result: CalcResult;
@@ -14,6 +16,9 @@ interface Props {
     web3Enabled: boolean;
     esgEnabled: boolean;
     onClose: () => void;
+    activeDeal?: Deal | null;
+    activeUser?: UserType | null;
+    onRefreshDeals?: () => void;
 }
 
 declare global {
@@ -37,7 +42,17 @@ function quoteId(): string {
     return `TRT-${seg(4)}-${seg(4)}`;
 }
 
-export default function OfferModal({ result, location, energyCost, web3Enabled, esgEnabled, onClose }: Props) {
+export default function OfferModal({ 
+    result, 
+    location, 
+    energyCost, 
+    web3Enabled, 
+    esgEnabled, 
+    onClose, 
+    activeDeal,
+    activeUser,
+    onRefreshDeals
+}: Props) {
     const totalKwh = result.annualSolarKwh + result.annualWindKwh;
     const annualSavings = result.totalAnnualRevenue;
     const co2 = Math.round(totalKwh * 0.0004 * 10) / 10;
@@ -61,7 +76,7 @@ export default function OfferModal({ result, location, energyCost, web3Enabled, 
         ['ESG Certifikace', esgEnabled ? 'CERTIFIKOVÁNO' : 'N/A'],
     ];
 
-    const [clientName, setClientName] = useState('ACME s.r.o.');
+    const [clientName, setClientName] = useState(activeDeal?.client_name || 'ACME s.r.o.');
     const [clientAddress, setClientAddress] = useState('Energetická 123, Technologické Město');
     const [clientLogoBase64, setClientLogoBase64] = useState<string | null>(null);
     const [consumptionValue, setConsumptionValue] = useState<number>(result.buildingConsumption);
@@ -145,10 +160,14 @@ export default function OfferModal({ result, location, energyCost, web3Enabled, 
         if (consumptionUnit === 'GWh') finalOverride = consumptionValue * 1000.0;
 
         try {
-            const response = await fetch('/api/generate-pdf', {
+            const response = await fetch(`${BACKEND_URL}/generate-pdf`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
+                    deal_id: activeDeal?.id,
+                    user_id: activeUser?.id,
+                    partner_id: activeUser?.partner_id,
+                    agent_name: activeUser?.username,
                     clientName,
                     clientAddress,
                     ico,
@@ -179,6 +198,9 @@ export default function OfferModal({ result, location, energyCost, web3Enabled, 
             a.click();
             document.body.removeChild(a);
             window.URL.revokeObjectURL(url);
+            
+            // Refresh parent deals list
+            onRefreshDeals?.();
         } catch (error) {
             console.error('Error generating PDF:', error);
             alert('Generování PDF selhalo. Zkontrolujte konzoli pro detaily.');
