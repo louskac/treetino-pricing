@@ -37,7 +37,7 @@ app = FastAPI(title="Treetino Engine", lifespan=lifespan)
 # Allow the React frontend to communicate with this backend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], 
+    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -224,7 +224,10 @@ async def handle_generate_pdf(request: dict):
         
         if deal_id:
             # Save the PDF file to filesystem
-            pdf_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static", "pdfs")
+            if os.environ.get("VERCEL"):
+                pdf_dir = "/tmp/static/pdfs"
+            else:
+                pdf_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static", "pdfs")
             os.makedirs(pdf_dir, exist_ok=True)
             pdf_filename = f"deal_{deal_id}.pdf"
             pdf_path = os.path.join(pdf_dir, pdf_filename)
@@ -250,7 +253,10 @@ async def handle_generate_pdf(request: dict):
 
 @router.get("/deals/{deal_id}/pdf")
 def get_deal_pdf(deal_id: int):
-    pdf_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static", "pdfs")
+    if os.environ.get("VERCEL"):
+        pdf_dir = "/tmp/static/pdfs"
+    else:
+        pdf_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static", "pdfs")
     pdf_path = os.path.join(pdf_dir, f"deal_{deal_id}.pdf")
     if not os.path.exists(pdf_path):
         raise HTTPException(status_code=404, detail="PDF nebyl nalezen")
