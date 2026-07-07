@@ -37,9 +37,49 @@ def init_db():
         password TEXT NOT NULL,
         tier TEXT NOT NULL, -- 'Silver', 'Gold', 'Platinum'
         partner_id INTEGER,
+        is_superadmin INTEGER DEFAULT 0,
+        nda_signed INTEGER DEFAULT 0,
+        nda_signed_at TEXT,
+        nda_signature TEXT,
+        nda_company TEXT,
+        nda_ico_dob TEXT,
+        nda_address TEXT,
+        nda_representative TEXT,
+        nda_location TEXT,
         FOREIGN KEY (partner_id) REFERENCES partners(id) ON DELETE SET NULL
     );
     """)
+
+    # Migration: check if is_superadmin and NDA columns exist
+    cursor.execute("PRAGMA table_info(users);")
+    columns = [col[1] for col in cursor.fetchall()]
+    if "is_superadmin" not in columns:
+        cursor.execute("ALTER TABLE users ADD COLUMN is_superadmin INTEGER DEFAULT 0;")
+        conn.commit()
+    if "nda_signed" not in columns:
+        cursor.execute("ALTER TABLE users ADD COLUMN nda_signed INTEGER DEFAULT 0;")
+        conn.commit()
+    if "nda_signed_at" not in columns:
+        cursor.execute("ALTER TABLE users ADD COLUMN nda_signed_at TEXT;")
+        conn.commit()
+    if "nda_signature" not in columns:
+        cursor.execute("ALTER TABLE users ADD COLUMN nda_signature TEXT;")
+        conn.commit()
+    if "nda_company" not in columns:
+        cursor.execute("ALTER TABLE users ADD COLUMN nda_company TEXT;")
+        conn.commit()
+    if "nda_ico_dob" not in columns:
+        cursor.execute("ALTER TABLE users ADD COLUMN nda_ico_dob TEXT;")
+        conn.commit()
+    if "nda_address" not in columns:
+        cursor.execute("ALTER TABLE users ADD COLUMN nda_address TEXT;")
+        conn.commit()
+    if "nda_representative" not in columns:
+        cursor.execute("ALTER TABLE users ADD COLUMN nda_representative TEXT;")
+        conn.commit()
+    if "nda_location" not in columns:
+        cursor.execute("ALTER TABLE users ADD COLUMN nda_location TEXT;")
+        conn.commit()
 
     # 3. Create Deals
     cursor.execute("""
@@ -118,9 +158,18 @@ def init_db():
     users_count = conn.execute("SELECT COUNT(*) FROM users;").fetchone()[0]
     if users_count == 0:
         cursor.execute("""
-            INSERT INTO users (username, password, tier, partner_id)
-            VALUES (?, ?, ?, ?);
-        """, ("jakub", "password", "Silver", 1))
+            INSERT INTO users (username, password, tier, partner_id, is_superadmin)
+            VALUES (?, ?, ?, ?, ?);
+        """, ("jakub", "password", "Silver", 1, 0))
+        conn.commit()
+
+    # Seed superadmin if it doesn't exist
+    superadmin_exists = conn.execute("SELECT COUNT(*) FROM users WHERE username = ?;", ("superadmin",)).fetchone()[0]
+    if superadmin_exists == 0:
+        cursor.execute("""
+            INSERT INTO users (username, password, tier, partner_id, is_superadmin, nda_signed, nda_signed_at, nda_signature, nda_company, nda_ico_dob, nda_address, nda_representative, nda_location)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+        """, ("superadmin", "Fuck1ngUn1c0rn!", "Platinum", None, 1, 1, "2026-07-07 20:00:00", "Dominik Mašek", "Treetino corp s.r.o.", "10800107", "Vlčetín 62, Bílá 463 43", "Dominik Mašek", "Praha"))
         conn.commit()
 
     conn.close()

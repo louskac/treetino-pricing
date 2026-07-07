@@ -5,11 +5,12 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, APIRouter, Query, HTTPException
 from fastapi.responses import Response, FileResponse
 import traceback
+from datetime import datetime
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 import httpx
 from .calculator import calculate_roi, CalculatorParams
-from .pdf_generator import generate_pdf
+from .pdf_generator import generate_pdf, generate_nda_pdf
 from .db import (
     init_db,
     get_partners,
@@ -83,6 +84,14 @@ class SaveConfigRequest(BaseModel):
 class UpdateStatusRequest(BaseModel):
     status: str
 
+class SignNdaRequest(BaseModel):
+    signature: str
+    company: str
+    ico_dob: str
+    address: str
+    representative: str
+    location: str
+
 router = APIRouter()
 
 # ─── CRM & Partner Portal Endpoints ───
@@ -116,12 +125,104 @@ def handle_login(req: LoginRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.post("/users/{user_id}/sign-nda")
+def handle_sign_nda(user_id: int, req: SignNdaRequest):
+    try:
+        conn = get_db_connection()
+        user = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+        if not user:
+            raise HTTPException(status_code=404, detail="Uživatel nenalezen")
+        
+        signed_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        conn.execute("""
+            UPDATE users 
+            SET nda_signed = 1, nda_signed_at = ?, nda_signature = ?, nda_company = ?, nda_ico_dob = ?, nda_address = ?, nda_representative = ?, nda_location = ?
+            WHERE id = ?;
+        """, (signed_at, req.signature, req.company, req.ico_dob, req.address, req.representative, req.location, user_id))
+        conn.commit()
+        
+        # Return updated user profile
+        row = conn.execute("""
+            SELECT u.id, u.username, u.tier, u.partner_id, u.is_superadmin, u.nda_signed, u.nda_signed_at, u.nda_signature, u.nda_company, u.nda_ico_dob, u.nda_address, u.nda_representative, u.nda_location, p.name as partner_name
+            FROM users u
+            LEFT JOIN partners p ON u.partner_id = p.id
+            WHERE u.id = ?;
+        """, (user_id,)).fetchone()
+        return dict(row) if row else None
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.get("/deals")
 def read_deals(user_id: int = Query(None)):
     try:
-        # Always return all deals to allow the map to render markers for all offers.
-        # The frontend filters deals client-side for activeUser.id in the CRM sidebar.
-        return get_deals()
+        if user_id:
+            conn = get_db_connection()
+            try:
+                row = conn.execute("SELECT is_superadmin FROM users WHERE id = ?", (user_id,)).fetchone()
+                is_admin = row["is_superadmin"] if row else 0
+            finally:
+                conn.close()
+            
+            if is_admin:
+                return get_deals(user_id=None)  # Admin sees all deals
+            else:
+                return get_deals(user_id=user_id)  # Regular user only sees their own deals
+        return []
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/admin/users")
+def read_admin_users(user_id: int = Query(...)):
+    try:
+        conn = get_db_connection()
+        try:
+            # Check if user_id is superadmin
+            user = conn.execute("SELECT is_superadmin FROM users WHERE id = ?", (user_id,)).fetchone()
+            if not user or not user["is_superadmin"]:
+                raise HTTPException(status_code=403, detail="Nedostatečná oprávnění")
+            
+            # Fetch all users
+            rows = conn.execute("""
+                SELECT u.id, u.username, u.tier, u.partner_id, u.is_superadmin, u.nda_signed, u.nda_signed_at, u.nda_signature, u.nda_company, u.nda_ico_dob, u.nda_address, u.nda_representative, u.nda_location, p.name as partner_name
+                FROM users u
+                LEFT JOIN partners p ON u.partner_id = p.id
+            """).fetchall()
+            
+            users_list = []
+            for r in rows:
+                user_dict = dict(r)
+                # Get deal stats
+                stats_row = conn.execute("""
+                    SELECT 
+                        COUNT(d.id) as deal_count,
+                        SUM(CASE WHEN c.total_price IS NOT NULL THEN c.total_price ELSE 0 END) as total_deal_value,
+                        SUM(CASE WHEN comm.amount_czk IS NOT NULL THEN comm.amount_czk ELSE 0 END) as total_commission
+                    FROM deals d
+                    LEFT JOIN configurations c ON d.id = c.deal_id
+                    LEFT JOIN commissions comm ON d.id = comm.deal_id
+                    WHERE d.user_id = ?
+                """, (user_dict["id"],)).fetchone()
+                
+                user_dict["deal_count"] = stats_row["deal_count"] or 0
+                user_dict["total_deal_value"] = stats_row["total_deal_value"] or 0
+                user_dict["total_commission"] = stats_row["total_commission"] or 0
+                
+                # Fetch user's deals
+                deal_rows = conn.execute("""
+                    SELECT id, client_name, status, created_at
+                    FROM deals
+                    WHERE user_id = ?
+                    ORDER BY id DESC
+                """, (user_dict["id"],)).fetchall()
+                user_dict["deals"] = [dict(dr) for dr in deal_rows]
+                
+                users_list.append(user_dict)
+                
+            return users_list
+        finally:
+            conn.close()
+    except HTTPException as e:
+        raise e
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -332,6 +433,31 @@ async def handle_calculate_roi(request: ROICalculationRequest):
             result = calculate_roi(request.params, solar_data, wind_data)
             return result
             
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/users/{user_id}/nda/download")
+def download_user_nda(user_id: int):
+    try:
+        conn = get_db_connection()
+        user = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+        if not user:
+            raise HTTPException(status_code=404, detail="Uživatel nenalezen")
+        
+        if not user["nda_signed"]:
+            raise HTTPException(status_code=400, detail="Dohoda o mlčenlivosti (NDA) nebyla tímto uživatelem dosud podepsána.")
+        
+        user_data = dict(user)
+        pdf_bytes = generate_nda_pdf(user_data)
+        
+        filename = f"NDA_Treetino_{user_data['username']}.pdf"
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f"attachment; filename={filename}"
+            }
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

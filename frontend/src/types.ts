@@ -136,6 +136,15 @@ export interface User {
     tier: 'Silver' | 'Gold' | 'Platinum';
     partner_id?: number | null;
     partner_name?: string | null;
+    is_superadmin?: number;
+    nda_signed?: number;
+    nda_signed_at?: string | null;
+    nda_signature?: string | null;
+    nda_company?: string | null;
+    nda_ico_dob?: string | null;
+    nda_address?: string | null;
+    nda_representative?: string | null;
+    nda_location?: string | null;
 }
 
 export interface DealConfig {

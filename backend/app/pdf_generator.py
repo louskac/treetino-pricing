@@ -1654,3 +1654,316 @@ def generate_pdf(data: dict) -> bytes:
     pdf_bytes = buffer.getvalue()
     buffer.close()
     return pdf_bytes
+
+
+# ─── NDA Document Generator ───
+
+from reportlab.platypus import Flowable
+
+class SvgSignatureFlowable(Flowable):
+    def __init__(self, svg_string, width=150, height=60):
+        Flowable.__init__(self)
+        self.svg_string = svg_string
+        self.width = width
+        self.height = height
+    def wrap(self, availWidth, availHeight):
+        return self.width, self.height
+    def draw(self):
+        if not self.svg_string:
+            return
+        import re
+        paths = re.findall(r'd="([^"]+)"', self.svg_string)
+        self.canv.saveState()
+        self.canv.setStrokeColor(colors.HexColor("#58cca8"))
+        self.canv.setLineWidth(1.5)
+        self.canv.setLineCap(1) # Round
+        self.canv.setLineJoin(1) # Round
+        
+        for path in paths:
+            points = []
+            tokens = path.strip().split()
+            i = 0
+            while i < len(tokens):
+                cmd = tokens[i]
+                if cmd in ('M', 'L'):
+                    try:
+                        x = float(tokens[i+1])
+                        y = float(tokens[i+2])
+                        points.append((x, y))
+                        i += 3
+                    except:
+                        i += 1
+                else:
+                    i += 1
+            if len(points) > 1:
+                for p1, p2 in zip(points[:-1], points[1:]):
+                    x1 = (p1[0] / 640.0) * self.width
+                    y1 = ((220.0 - p1[1]) / 220.0) * self.height
+                    x2 = (p2[0] / 640.0) * self.width
+                    y2 = ((220.0 - p2[1]) / 220.0) * self.height
+                    self.canv.line(x1, y1, x2, y2)
+        self.canv.restoreState()
+
+
+def generate_nda_pdf(user_data: dict) -> bytes:
+    import io
+    from datetime import datetime
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, KeepTogether, Image
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    
+    buffer = io.BytesIO()
+    
+    # Register fonts path
+    fonts_path = os.path.join(os.path.dirname(__file__), "fonts")
+    try:
+        pdfmetrics.registerFont(TTFont("Roboto", os.path.join(fonts_path, "Roboto-Regular.ttf")))
+        pdfmetrics.registerFont(TTFont("Roboto-Bold", os.path.join(fonts_path, "Roboto-Bold.ttf")))
+    except:
+        pass
+        
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=50,
+        leftMargin=50,
+        topMargin=40,
+        bottomMargin=40
+    )
+    
+    styles = getSampleStyleSheet()
+    
+    # Custom styles
+    title_style = ParagraphStyle(
+        'NDATitle',
+        parent=styles['Normal'],
+        fontName='Roboto-Bold',
+        fontSize=12,
+        leading=15,
+        alignment=1, # Center
+        textColor=colors.HexColor('#1e3a8a'),
+        spaceAfter=5
+    )
+    
+    subtitle_style = ParagraphStyle(
+        'NDASubTitle',
+        parent=styles['Normal'],
+        fontName='Roboto',
+        fontSize=8,
+        leading=10,
+        alignment=1, # Center
+        textColor=colors.HexColor('#475569'),
+        spaceAfter=15
+    )
+    
+    section_title = ParagraphStyle(
+        'NDASectionTitle',
+        parent=styles['Normal'],
+        fontName='Roboto-Bold',
+        fontSize=9,
+        leading=11,
+        textColor=colors.HexColor('#1e3a8a'),
+        spaceBefore=10,
+        spaceAfter=5
+    )
+    
+    body_style = ParagraphStyle(
+        'NDABody',
+        parent=styles['Normal'],
+        fontName='Roboto',
+        fontSize=8.5,
+        leading=11.5,
+        textColor=colors.HexColor('#1e293b'),
+        spaceAfter=6
+    )
+    
+    table_label_style = ParagraphStyle(
+        'NDATableLabel',
+        parent=styles['Normal'],
+        fontName='Roboto-Bold',
+        fontSize=8.5,
+        leading=10,
+        textColor=colors.HexColor('#1e3a8a')
+    )
+    
+    table_text_style = ParagraphStyle(
+        'NDATableText',
+        parent=styles['Normal'],
+        fontName='Roboto',
+        fontSize=8.5,
+        leading=10,
+        textColor=colors.HexColor('#1e293b')
+    )
+
+    story = []
+    
+    # 1. Document Title
+    story.append(Paragraph("DOHODA O MLČENLIVOSTI, OCHRANĚ INFORMACÍ A ZÁKAZU JEJICH ZNEUŽITÍ", title_style))
+    story.append(Paragraph("uzavřená dle ustanovení § 1746 odst. 2 zákona č. 89/2012 Sb., občanský zákoník, ve znění pozdějších předpisů.", subtitle_style))
+    
+    # 2. Section I: Smluvni strany
+    story.append(Paragraph("I. Smluvní strany", section_title))
+    
+    # Draw Poskytovatel Table
+    poskytovatel_data = [
+        [Paragraph("1. Poskytovatel:", table_label_style), ""],
+        [Paragraph("Obchodní firma:", table_text_style), Paragraph("Treetino corp s.r.o.", table_text_style)],
+        [Paragraph("IČO:", table_text_style), Paragraph("10800107", table_text_style)],
+        [Paragraph("Sídlo:", table_text_style), Paragraph("Vlčetín 62, Bílá 46343", table_text_style)],
+        [Paragraph("Zastoupená panem:", table_text_style), Paragraph("Dominikem Maškem", table_text_style)]
+    ]
+    t1 = Table(poskytovatel_data, colWidths=[110, 385])
+    t1.setStyle(TableStyle([
+        ('SPAN', (0, 0), (1, 0)),
+        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f8fafc')),
+        ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor('#e2e8f0')),
+        ('PADDING', (0, 0), (-1, -1), 3),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+    ]))
+    story.append(t1)
+    story.append(Spacer(1, 6))
+    
+    # Draw Prijemce Table
+    prijemce_data = [
+        [Paragraph("2. Příjemce:", table_label_style), ""],
+        [Paragraph("Jméno / Firma:", table_text_style), Paragraph(user_data.get('nda_company') or user_data.get('username') or '', table_text_style)],
+        [Paragraph("IČO / Datum nar.:", table_text_style), Paragraph(user_data.get('nda_ico_dob') or '', table_text_style)],
+        [Paragraph("Sídlo / Bydliště:", table_text_style), Paragraph(user_data.get('nda_address') or '', table_text_style)],
+        [Paragraph("Zastoupen/a panem:", table_text_style), Paragraph(user_data.get('nda_representative') or '', table_text_style)]
+    ]
+    t2 = Table(prijemce_data, colWidths=[110, 385])
+    t2.setStyle(TableStyle([
+        ('SPAN', (0, 0), (1, 0)),
+        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f8fafc')),
+        ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor('#e2e8f0')),
+        ('PADDING', (0, 0), (-1, -1), 3),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+    ]))
+    story.append(t2)
+    story.append(Spacer(1, 8))
+    
+    story.append(Paragraph("Smluvní strany uzavírají níže uvedeného dne, měsíce a roku tuto Dohodu o mlčenlivosti, ochraně informací a zákazu jejich zneužití (dále jen „Dohoda“).", body_style))
+    
+    # 3. Clauses
+    story.append(Paragraph("II. Účel a předmět", section_title))
+    story.append(Paragraph("2.1 Účelem této Dohody je ochrana důvěrných informací Smluvních stran, s nimiž se Smluvní strany seznámí v rámci jednání o spolupráci a následné spolupráci, v jejímž rámci bude Příjemce poskytovat společnosti Treetino corp s.r.o. Konzultační a prodejní služby (dále též jako „vzájemná spolupráce“).", body_style))
+    story.append(Paragraph("2.2 Předmětem této Dohody je bližší vymezení důvěrných informaci Smluvních stran a převzetí závazku Smluvních stran zachovat o těchto důvěrných informacích mlčenlivost a nesdělit je ani neumožnit k nim přístup třetím osobám, nebo je nevyužít ve svůj prospěch nebo ve prospěch třetích osob, není-li v této Dohodě stanoveno jinak.", body_style))
+    story.append(Paragraph("2.3 Důvěrnými informacemi se pro účely této Dohody a po celou dobu trvání vzájemné spolupráce Smluvních stran rozumí, bez ohledu na formu a způsob jejich sdělení či zachycení a až do doby jejich zveřejnění, jakékoli a všechny skutečnosti, které se Smluvní strana v průběhu vzájemné spolupráce dozví, a/nebo které jí druhá Smluvní strana v průběhu vzájemné spolupráce zpřístupní, jakož i sama existence těchto skutečností a vzájemné spolupráce Smluvních stran (dále jen „Důvěrné informace“).", body_style))
+    story.append(Paragraph("2.4 Obchodní tajemství a Důvěrné informace ve smyslu § 1730 občanského zákoníku touto Dohodou chráněné tvoří rovněž veškeré skutečnosti technické, ekonomické, právní a výrobní povahy v hmotné nebo nehmotné formě, které byly jednou ze Smluvních stran takto označeny a byly poskytnuty druhé Smluvní straně. Tyto skutečnosti nejsou v příslušných obchodních kruzích zpravidla běžně dostupné a obě Smluvní strany mají zájem na jejich utajení a na odpovídajícím způsobu jejich ochrany. Obchodní tajemství a Důvěrné informace jsou dále společně označeny též jako „Chráněné informace“.", body_style))
+    
+    story.append(Paragraph("III. Závazky mlčenlivosti", section_title))
+    story.append(Paragraph("3.1 Obě smluvní strany se zavazují, že veškeré skutečnosti spadající do oblasti Chráněných informací nebudou dále rozšiřovat nebo reprodukovat a nezpřístupní je třetí straně. Smluvní strany se dále zavazují, že Chráněné informace nepoužijí v rozporu s jejich účelem ani účelem jejich poskytnutí pro své potřeby nebo ve prospěch třetích osob.", body_style))
+    story.append(Paragraph("3.2 Obě Smluvní strany omezí počet zaměstnanců pro styk s těmito Chráněnými informacemi a přijmou účinná opatření pro zamezení úniku informací.", body_style))
+    story.append(Paragraph("3.3 V případě, že jedna Smluvní strana bude nezbytně potřebovat k zajištění některé činnosti třetí stranu, může jí předat informace, které jsou předmětem ochrany dle této Dohody, pouze s předchozím písemným souhlasem druhé Smluvní strany, a to za podmínky, že se třetí strana smluvně zaváže k jejich ochraně v rozsahu jako samotná Smluvní strana.", body_style))
+    story.append(Paragraph("3.4 Povinnost plnit ustanovení této Dohody se nevztahuje na ty Chráněné informace, které:", body_style))
+    story.append(Paragraph("a. mohou být zveřejněny bez porušení této Dohody;<br/>"
+                           "b. byly písemným souhlasem druhé Smluvní strany uvolněny od těchto omezení;<br/>"
+                           "c. jsou veřejně dostupné nebo byly zveřejněny jinak, než porušením povinnosti jedné ze Smluvních stran;<br/>"
+                           "d. jsou příjemci prokazatelně známy dříve, než je sdělí Smluvní strana;<br/>"
+                           "e. byly vyžádány soudem, státním zastupitelstvím nebo věcně příslušným správním orgánem na základě zákona a jsou použity pouze k tomuto účelu.", body_style))
+    story.append(Paragraph("3.5 Poskytnutí informací spadajících do oblasti Chráněných informací nezakládá žádné právo na licenci, ochrannou známku, patent, právo užití nebo šíření autorského díla, ani jakékoliv jiné právo duševního nebo průmyslového vlastnictví.", body_style))
+
+    story.append(Paragraph("IV. Smluvní pokuty", section_title))
+    story.append(Paragraph("4.1 Způsobí-li jedna Smluvní strana druhé Smluvní straně škodu porušením této Dohody, je smluvní pokuta stanovena na 500 000 Kč.", body_style))
+    
+    story.append(Paragraph("V. Závěrečná ustanovení", section_title))
+    story.append(Paragraph("5.1 Dohoda nabývá platnosti a účinnosti dnem podpisu oprávněnými zástupci obou smluvních stran.", body_style))
+    story.append(Paragraph("5.2 Bude-li shledáno nebo stane-li se některé ustanovení této Dohody neplatným, nevymahatelným nebo neúčinným, nedotýká se tato neplatnost, nevymahatelnost či neúčinnosti ostatních ustanovení této Dohody.", body_style))
+    story.append(Paragraph("5.3 Dohoda se uzavírá na dobu neurčitou.", body_style))
+    story.append(Paragraph("5.4 Veškeré změny a doplňky této Dohody vyžadují písemný souhlas obou smluvních stran ve formě následně číslovaných dodatků.", body_style))
+    story.append(Paragraph("5.5 Právní vztahy vzniklé z této Dohody a vyplývající z této Dohody se řídí právním řádem České republiky.", body_style))
+    story.append(Paragraph("5.6 Tato Dohoda je vyhotovena ve dvou vyhotoveních, z nichž každá Smluvní strana obdrží po jednom z nich.", body_style))
+    
+    story.append(Spacer(1, 10))
+    
+    # 4. Signatures Box (using KeepTogether to prevent separation)
+    sig_date_style = ParagraphStyle(
+        'NDASigDate',
+        parent=styles['Normal'],
+        fontName='Roboto',
+        fontSize=8,
+        leading=10,
+        textColor=colors.HexColor('#475569'),
+        spaceAfter=5
+    )
+    
+    sig_title_style = ParagraphStyle(
+        'NDASigTitle',
+        parent=styles['Normal'],
+        fontName='Roboto-Bold',
+        fontSize=8.5,
+        leading=11,
+        textColor=colors.HexColor('#1e3a8a')
+    )
+    
+    sig_name_style = ParagraphStyle(
+        'NDASigName',
+        parent=styles['Normal'],
+        fontName='Roboto',
+        fontSize=8.5,
+        leading=11,
+        textColor=colors.HexColor('#1e293b')
+    )
+
+    # Dominik Masek Signature image handling
+    masek_sig_flowable = ""
+    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+    masek_sig_path = os.path.join(base_dir, "frontend", "public", "branding", "signature_masek_2.png")
+    if os.path.exists(masek_sig_path):
+        masek_sig_flowable = Image(masek_sig_path, width=110, height=40)
+    
+    # Partner Canvas SVG signature path drawing flowable
+    partner_sig_svg = user_data.get('nda_signature') or ''
+    partner_sig_flowable = SvgSignatureFlowable(partner_sig_svg, width=150, height=50)
+    
+    formatted_sign_date = '29.06.2026'
+    if user_data.get('nda_signed_at'):
+        try:
+            # Parse YYYY-MM-DD HH:MM:SS to cs-CZ locale
+            dt = datetime.strptime(user_data.get('nda_signed_at'), "%Y-%m-%d %H:%M:%S")
+            formatted_sign_date = f"{dt.day}. {dt.month}. {dt.year}"
+        except:
+            formatted_sign_date = user_data.get('nda_signed_at')
+
+    # Date headers directly above the signature box table
+    sig_table_data = [
+        [
+            Paragraph(f"V Praze dne: {formatted_sign_date}", sig_date_style),
+            Paragraph(f"V {user_data.get('nda_location') or '__________'} dne: {formatted_sign_date}", sig_date_style)
+        ],
+        [
+            masek_sig_flowable,
+            partner_sig_flowable
+        ],
+        [
+            Paragraph("Poskytovatel:", sig_title_style),
+            Paragraph("Příjemce:", sig_title_style)
+        ],
+        [
+            Paragraph("Treetino corp s.r.o.", sig_name_style),
+            Paragraph(user_data.get('nda_company') or user_data.get('username') or '', sig_name_style)
+        ],
+        [
+            Paragraph("Zastoupen: Dominik Mašek, Jednatel", sig_name_style),
+            Paragraph(f"Zastoupen: {user_data.get('nda_representative') or ''}", sig_name_style)
+        ]
+    ]
+    
+    sig_table = Table(sig_table_data, colWidths=[240, 255])
+    sig_table.setStyle(TableStyle([
+        ('LINEBELOW', (0, 0), (0, 0), 0.5, colors.HexColor('#cbd5e1')),
+        ('LINEBELOW', (1, 0), (1, 0), 0.5, colors.HexColor('#cbd5e1')),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 3),
+        ('TOPPADDING', (0, 1), (-1, 1), 6),
+        ('BOTTOMPADDING', (0, 1), (-1, 1), 6),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+    ]))
+    
+    story.append(KeepTogether([sig_table]))
+    
+    doc.build(story)
+    pdf_bytes = buffer.getvalue()
+    buffer.close()
+    return pdf_bytes

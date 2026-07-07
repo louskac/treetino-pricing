@@ -26,6 +26,8 @@ import AnalyticsPanel from './components/AnalyticsPanel';
 import OfferModal from './components/OfferModal';
 import CrmPanel from './components/CrmPanel';
 import LoginScreen from './components/LoginScreen';
+import AdminDashboard from './components/AdminDashboard';
+import NdaModal from './components/NdaModal';
 // @ts-ignore
 import RotatingText from './components/reactbits/RotatingText/RotatingText';
 // @ts-ignore
@@ -93,14 +95,15 @@ export default function App() {
   // ─── CRM & Partner Portal State ───────────────────────
   const [crmActive, setCrmActive] = useState(false);
   const [activeUser, setActiveUser] = useState<User | null>(null);
+  const [viewMode, setViewMode] = useState<'crm' | 'admin'>('crm');
   
   // All deals in database (for map overlay pins)
   const [allDeals, setAllDeals] = useState<Deal[]>([]);
   const [activeDeal, setActiveDeal] = useState<Deal | null>(null);
 
-  // ─── Load Session from localStorage ──────────────────
+  // ─── Load Session from localStorage or sessionStorage ──────────────────
   useEffect(() => {
-    const cachedUserObj = localStorage.getItem('treetino_user');
+    const cachedUserObj = localStorage.getItem('treetino_user') || sessionStorage.getItem('treetino_user');
     
     if (cachedUserObj) {
       try {
@@ -116,7 +119,7 @@ export default function App() {
   const fetchAllDeals = async () => {
     if (!activeUser) return;
     try {
-      const { data } = await axios.get<Deal[]>(`${BACKEND_URL}/deals`);
+      const { data } = await axios.get<Deal[]>(`${BACKEND_URL}/deals?user_id=${activeUser.id}`);
       setAllDeals(data);
       if (activeDeal) {
         const updatedActive = data.find(d => d.id === activeDeal.id);
@@ -134,9 +137,15 @@ export default function App() {
   }, [activeUser]);
 
   // ─── Login Handler ───────────────────────────────────
-  const handleLogin = (user: User) => {
+  const handleLogin = (user: User, rememberMe: boolean) => {
     setActiveUser(user);
-    localStorage.setItem('treetino_user', JSON.stringify(user));
+    if (rememberMe) {
+      localStorage.setItem('treetino_user', JSON.stringify(user));
+      sessionStorage.removeItem('treetino_user');
+    } else {
+      sessionStorage.setItem('treetino_user', JSON.stringify(user));
+      localStorage.removeItem('treetino_user');
+    }
     setCrmActive(true);
   };
 
@@ -147,6 +156,7 @@ export default function App() {
     setLocation(null);
     setResult(null);
     localStorage.removeItem('treetino_user');
+    sessionStorage.removeItem('treetino_user');
     setCrmActive(false);
   };
 
@@ -292,6 +302,24 @@ export default function App() {
     return <LoginScreen onLogin={handleLogin} />;
   }
 
+  // ─── Show NDA Sign Screen if first-time user hasn't signed yet (bypass for superadmin) ─────
+  if (activeUser && !activeUser.nda_signed && activeUser.is_superadmin !== 1) {
+    return (
+      <NdaModal
+        activeUser={activeUser}
+        onNdaSigned={(updatedUser) => {
+          setActiveUser(updatedUser);
+          const isRemembered = localStorage.getItem('treetino_user') !== null;
+          if (isRemembered) {
+            localStorage.setItem('treetino_user', JSON.stringify(updatedUser));
+          } else {
+            sessionStorage.setItem('treetino_user', JSON.stringify(updatedUser));
+          }
+        }}
+      />
+    );
+  }
+
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-slate-950 font-sans text-white">
       {/* 1. MAP CANVAS */}
@@ -395,8 +423,10 @@ export default function App() {
             web3Enabled={web3Enabled}
             buildingConsumption={buildingConsumption}
             discount={discount}
-            deals={allDeals.filter(d => d.user_id === activeUser.id)}
+            deals={activeUser.is_superadmin === 1 ? allDeals : allDeals.filter(d => d.user_id === activeUser.id)}
             onRefreshDeals={fetchAllDeals}
+            viewMode={viewMode}
+            setViewMode={setViewMode}
           />
         ) : (
           <>
@@ -561,6 +591,21 @@ export default function App() {
             activeUser={activeUser}
             onRefreshDeals={fetchAllDeals}
             onClose={() => setShowModal(false)} 
+          />
+        )}
+      </AnimatePresence>
+
+      {/* 6. SUPERADMIN DASHBOARD FULL SCREEN OVERLAY */}
+      <AnimatePresence>
+        {crmActive && activeUser?.is_superadmin === 1 && viewMode === 'admin' && (
+          <AdminDashboard
+            activeUser={activeUser}
+            onLogout={handleLogout}
+            viewMode={viewMode}
+            setViewMode={setViewMode}
+            onSelectDeal={handleSelectDeal}
+            allDeals={allDeals}
+            onRefreshDeals={fetchAllDeals}
           />
         )}
       </AnimatePresence>

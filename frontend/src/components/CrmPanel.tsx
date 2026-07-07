@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -12,11 +12,10 @@ import {
   User,
   LogOut,
   Sliders,
-  FileText,
-  DollarSign as MoneyIcon
+  FileText
 } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell } from 'recharts';
-import type { Partner, Deal, CalcResult, SelectedLocation, User as UserType } from '../types';
+import type { Deal, CalcResult, SelectedLocation, User as UserType } from '../types';
 
 const BACKEND_URL = import.meta.env.PROD ? '/api' : 'http://localhost:8000';
 
@@ -37,6 +36,8 @@ interface Props {
   discount: number;
   deals: Deal[];
   onRefreshDeals: () => Promise<void> | void;
+  viewMode: 'crm' | 'admin';
+  setViewMode: (mode: 'crm' | 'admin') => void;
 }
 
 export default function CrmPanel({
@@ -55,19 +56,17 @@ export default function CrmPanel({
   buildingConsumption,
   discount,
   deals,
-  onRefreshDeals
+  onRefreshDeals,
+  viewMode,
+  setViewMode
 }: Props) {
-  // ─── States ────────────────────────────────────────────
   const [savingConfig, setSavingConfig] = useState(false);
-
-
 
   // ─── Save Layout Configuration ────────────────────────
   const handleSaveConfig = async () => {
     if (!activeDeal || !currentResult || !currentLocation) return;
     setSavingConfig(true);
     try {
-      // Backend now computes the forecast, but we pass it as computed in parent calculator
       const forecastVal = currentResult.commissionForecast || 0;
       
       await axios.post(`${BACKEND_URL}/deals/${activeDeal.id}/config`, {
@@ -88,7 +87,6 @@ export default function CrmPanel({
       
       await onRefreshDeals();
       
-      // Keep loaded state synced
       onSelectDeal({
         ...activeDeal,
         status: 'In Progress',
@@ -173,7 +171,7 @@ export default function CrmPanel({
   return (
     <div className="flex flex-col gap-6 text-slate-200">
       
-      {/* 1. SALES REPRESENTATIVE PROFILE CARD */}
+      {/* 1. SALES REPRESENTATIVE PROFILE CARD & VIEW SWITCHER */}
       <div className="p-5 rounded-3xl bg-slate-900/95 border border-slate-800 space-y-4 shadow-xl relative overflow-hidden group">
         <div className="absolute top-0 right-0 w-24 h-24 rounded-full bg-treetino-light/5 blur-2xl pointer-events-none" />
         
@@ -183,7 +181,9 @@ export default function CrmPanel({
               <User className="w-5 h-5 text-treetino-light" />
             </div>
             <div className="flex flex-col">
-              <span className="text-[10px] text-treetino-light font-bold uppercase tracking-widest font-mono">Přihlášený prodejce</span>
+              <span className="text-[10px] text-treetino-light font-bold uppercase tracking-widest font-mono">
+                {activeUser?.is_superadmin === 1 ? 'Superadministrátor' : 'Přihlášený prodejce'}
+              </span>
               <h3 className="text-sm font-bold text-white leading-tight mt-0.5">{activeUser?.username}</h3>
             </div>
           </div>
@@ -197,19 +197,46 @@ export default function CrmPanel({
           </button>
         </div>
 
+        {/* Admin Switcher Toggles */}
+        {activeUser?.is_superadmin === 1 && (
+          <div className="grid grid-cols-2 gap-1 p-1 bg-slate-950/80 rounded-xl border border-slate-800">
+            <button
+              onClick={() => setViewMode('crm')}
+              className={`py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${
+                viewMode === 'crm' 
+                  ? 'bg-treetino-light text-slate-950 shadow-[0_2px_10px_rgba(88,204,168,0.2)]' 
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Klientská Sekce
+            </button>
+            <button
+              onClick={() => setViewMode('admin')}
+              className={`py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${
+                viewMode === 'admin' 
+                  ? 'bg-treetino-light text-slate-950 shadow-[0_2px_10px_rgba(88,204,168,0.2)]' 
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Administrace
+            </button>
+          </div>
+        )}
+
         <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px] font-mono text-slate-400">
-          <span>Organizace: <strong className="text-white">{activeUser?.partner_name || 'Nezávislý'}</strong></span>
-          <span className="bg-treetino-light/15 text-treetino-light px-2 py-0.5 rounded-md text-[9px] font-bold tracking-wide uppercase">
-            {activeUser?.tier}
-          </span>
+          <span>Provizní třída:</span>
+          <div className="flex items-center gap-1 font-bold text-treetino-light bg-treetino-light/10 py-0.5 px-2 rounded-full border border-treetino-light/20">
+            <span>{activeUser?.tier}</span>
+            <Award className="w-4 h-4 text-treetino-light opacity-80" />
+          </div>
         </div>
       </div>
 
-      {/* 2. REAL-TIME COMMISSION STATISTICS */}
-      <div className="p-5 rounded-3xl bg-slate-900/95 border border-slate-800 flex flex-col gap-4 shadow-xl">
+      {/* 2. STATS & CHART FOR REGULAR CRM VIEW */}
+      <div className="p-5 rounded-3xl bg-slate-900/95 border border-slate-800 space-y-4 shadow-xl">
         <div className="flex items-center justify-between">
           <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-            <DollarSign className="w-3.5 h-3.5 text-[#fbbf24]" /> Vaše Provize (Celkově)
+            <DollarSign className="w-3.5 h-3.5 text-treetino-light" /> Přehled Provizí
           </label>
           <Award className="w-4 h-4 text-treetino-light opacity-80" />
         </div>
@@ -224,7 +251,7 @@ export default function CrmPanel({
             <div className="text-xs font-bold text-white mt-1 font-mono">{formatMoney(pendingTotal)}</div>
           </div>
           <div className="p-2.5 rounded-2xl bg-slate-950/60 border border-cyan-500/15 text-center">
-            <div className="text-[8px] text-cyan-400 font-bold uppercase tracking-wider">Rozpracováno</div>
+            <div className="text-[8px] text-cyan-400 font-bold uppercase tracking-wider font-mono font-bold">Rozpracováno</div>
             <div className="text-xs font-bold text-white mt-1 font-mono">{formatMoney(forecastedTotal)}</div>
           </div>
         </div>
@@ -253,9 +280,7 @@ export default function CrmPanel({
         )}
       </div>
 
-
-
-      {/* 4. ACTIVE CONFIGURED SAVE BUTTON */}
+      {/* 3. ACTIVE CONFIGURED SAVE BUTTON */}
       <AnimatePresence>
         {activeDeal && (
           <motion.div 
@@ -295,7 +320,7 @@ export default function CrmPanel({
         )}
       </AnimatePresence>
 
-      {/* 5. SALES REPRESENTATIVES PIPELINE LISTING */}
+      {/* 4. SALES REPRESENTATIVES PIPELINE LISTING */}
       <div className="flex flex-col gap-3">
         <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest flex items-center gap-2 px-1">
           <Briefcase className="w-3.5 h-3.5 text-treetino-light" /> Obchody Organizace ({deals.length})
