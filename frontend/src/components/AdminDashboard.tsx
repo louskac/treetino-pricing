@@ -161,7 +161,7 @@ export default function AdminDashboard({
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-3 bg-slate-900/80 px-4 py-1.5 rounded-xl border border-slate-800/80 shadow-inner">
             <div className="p-1 rounded-lg bg-rose-500/10 border border-rose-500/20">
-              <Award className="w-3.5 h-3.5 text-rose-450 drop-shadow-[0_0_8px_rgba(239,68,68,0.4)]" />
+              <Award className="w-3.5 h-3.5 text-rose-400 drop-shadow-[0_0_8px_rgba(239,68,68,0.4)]" />
             </div>
             <div className="flex flex-col text-left">
               <span className="text-[9px] font-mono text-slate-500 uppercase leading-none">Administrátor</span>
@@ -180,7 +180,7 @@ export default function AdminDashboard({
           <button
             onClick={onLogout}
             title="Odhlásit se"
-            className="p-2 rounded-xl bg-slate-900 border border-slate-800 hover:bg-rose-500/15 hover:border-rose-500/30 text-slate-400 hover:text-rose-450 transition-colors"
+            className="p-2 rounded-xl bg-slate-900 border border-slate-800 hover:bg-rose-500/15 hover:border-rose-500/30 text-slate-400 hover:text-rose-400 transition-colors"
           >
             <LogOut className="w-4 h-4" />
           </button>
@@ -197,7 +197,7 @@ export default function AdminDashboard({
               <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">B2B Partneři</span>
               <div className="text-xl font-bold text-white font-mono mt-0.5">{totalPlatformUsers}</div>
             </div>
-            <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-450">
+            <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-400">
               <Users className="w-5 h-5" />
             </div>
           </div>
@@ -207,7 +207,7 @@ export default function AdminDashboard({
               <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Celkem Obchodů</span>
               <div className="text-xl font-bold text-white font-mono mt-0.5">{totalDealsCount}</div>
             </div>
-            <div className="p-2.5 rounded-xl bg-cyan-500/10 text-cyan-450">
+            <div className="p-2.5 rounded-xl bg-cyan-500/10 text-cyan-400">
               <Briefcase className="w-5 h-5" />
             </div>
           </div>
@@ -227,7 +227,7 @@ export default function AdminDashboard({
               <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Provize Celkem</span>
               <div className="text-xl font-bold text-treetino-light font-mono mt-0.5">{formatMoney(totalCommissionsValue)}</div>
             </div>
-            <div className="p-2.5 rounded-xl bg-violet-500/10 text-violet-450">
+            <div className="p-2.5 rounded-xl bg-violet-500/10 text-violet-400">
               <TrendingUp className="w-5 h-5" />
             </div>
           </div>
@@ -269,7 +269,7 @@ export default function AdminDashboard({
               ) : (
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
-                    <tr className="border-b border-slate-900/60 bg-slate-950/20 text-slate-450 font-bold uppercase tracking-wider text-[9px] sticky top-0 z-10 select-none">
+                    <tr className="border-b border-slate-900/60 bg-slate-950/20 text-slate-400 font-bold uppercase tracking-wider text-[9px] sticky top-0 z-10 select-none">
                       <th className="py-3 px-4 w-[22%]">Uživatelské jméno</th>
                       <th className="py-3 px-4 w-[8%]">Tier</th>
                       <th className="py-3 px-4 w-[20%]">Organizace</th>
@@ -327,7 +327,7 @@ export default function AdminDashboard({
                                   </div>
                                 ) : (
                                   <div 
-                                    className="p-1 bg-rose-500/10 text-rose-450 border border-rose-500/10 rounded-md cursor-help opacity-60 hover:opacity-100 transition-opacity"
+                                    className="p-1 bg-rose-500/10 text-rose-400 border border-rose-500/10 rounded-md cursor-help opacity-60 hover:opacity-100 transition-opacity"
                                     title="NDA chybí"
                                   >
                                     <FileText className="w-3.5 h-3.5" />
@@ -343,7 +343,7 @@ export default function AdminDashboard({
                                   </div>
                                 ) : (
                                   <div 
-                                    className="p-1 bg-rose-500/10 text-rose-450 border border-rose-500/10 rounded-md cursor-help opacity-60 hover:opacity-100 transition-opacity"
+                                    className="p-1 bg-rose-500/10 text-rose-400 border border-rose-500/10 rounded-md cursor-help opacity-60 hover:opacity-100 transition-opacity"
                                     title="Smlouva o zprostředkování chybí"
                                   >
                                     <Briefcase className="w-3.5 h-3.5" />
@@ -476,8 +476,8 @@ export default function AdminDashboard({
                     <span className="text-[10px] font-bold text-white uppercase tracking-widest font-mono">Dohoda o Mlčenlivosti (NDA)</span>
                     <span className={`text-[8px] font-bold px-2 py-0.5 rounded border ${
                       selectedUser.nda_signed 
-                        ? 'bg-emerald-500/10 text-emerald-450 border-emerald-500/20' 
-                        : 'bg-rose-500/10 text-rose-450 border-rose-500/20'
+                        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
+                        : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
                     }`}>
                       {selectedUser.nda_signed ? 'PODEPSÁNO' : 'NEPODEPSÁNO'}
                     </span>
@@ -511,7 +511,7 @@ export default function AdminDashboard({
                       <div className="grid grid-cols-2 gap-3 pt-1">
                         <div className="p-2 border border-slate-850 rounded-xl bg-slate-950/40 text-center">
                           <span className="text-[7px] text-slate-500 uppercase font-mono block">Za Treetino corp s.r.o.</span>
-                          <span className="text-[8px] text-slate-450 font-mono block mt-0.5">V Praze dne: {selectedUser.nda_signed_at ? new Date(selectedUser.nda_signed_at).toLocaleDateString('cs-CZ') : 'Neuvedeno'}</span>
+                          <span className="text-[8px] text-slate-400 font-mono block mt-0.5">V Praze dne: {selectedUser.nda_signed_at ? new Date(selectedUser.nda_signed_at).toLocaleDateString('cs-CZ') : 'Neuvedeno'}</span>
                           <div className="h-10 flex items-center justify-center mt-1">
                             <img src="/branding/signature_masek_2.png" alt="Dominik Masek Signature" className="h-8 object-contain filter invert opacity-80 pointer-events-none" />
                           </div>
@@ -519,7 +519,7 @@ export default function AdminDashboard({
 
                         <div className="p-2 border border-slate-850 rounded-xl bg-slate-950/40 text-center">
                           <span className="text-[7px] text-slate-500 uppercase font-mono block">Za Partnera (Podpis)</span>
-                          <span className="text-[8px] text-slate-450 font-mono block mt-0.5">V {selectedUser.nda_location || '__________'} dne: {selectedUser.nda_signed_at ? new Date(selectedUser.nda_signed_at).toLocaleDateString('cs-CZ') : 'Neuvedeno'}</span>
+                          <span className="text-[8px] text-slate-400 font-mono block mt-0.5">V {selectedUser.nda_location || '__________'} dne: {selectedUser.nda_signed_at ? new Date(selectedUser.nda_signed_at).toLocaleDateString('cs-CZ') : 'Neuvedeno'}</span>
                           <div className="h-10 flex items-center justify-center mt-1 text-treetino-light">
                             {selectedUser.nda_signature ? (
                               <div 
@@ -561,8 +561,8 @@ export default function AdminDashboard({
                     <span className="text-[10px] font-bold text-white uppercase tracking-widest font-mono">Smlouva o Zprostředkování</span>
                     <span className={`text-[8px] font-bold px-2 py-0.5 rounded border ${
                       selectedUser.mediation_signed 
-                        ? 'bg-emerald-500/10 text-emerald-450 border-emerald-500/20' 
-                        : 'bg-rose-500/10 text-rose-450 border-rose-500/20'
+                        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
+                        : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
                     }`}>
                       {selectedUser.mediation_signed ? 'PODEPSÁNO' : 'NEPODEPSÁNO'}
                     </span>
@@ -596,7 +596,7 @@ export default function AdminDashboard({
                       <div className="grid grid-cols-2 gap-3 pt-1">
                         <div className="p-2 border border-slate-850 rounded-xl bg-slate-950/40 text-center">
                           <span className="text-[7px] text-slate-500 uppercase font-mono block">Za Treetino corp s.r.o.</span>
-                          <span className="text-[8px] text-slate-450 font-mono block mt-0.5">V Praze dne: {selectedUser.mediation_signed_at ? new Date(selectedUser.mediation_signed_at).toLocaleDateString('cs-CZ') : 'Neuvedeno'}</span>
+                          <span className="text-[8px] text-slate-400 font-mono block mt-0.5">V Praze dne: {selectedUser.mediation_signed_at ? new Date(selectedUser.mediation_signed_at).toLocaleDateString('cs-CZ') : 'Neuvedeno'}</span>
                           <div className="h-10 flex items-center justify-center mt-1">
                             <img src="/branding/signature_masek_2.png" alt="Dominik Masek Signature" className="h-8 object-contain filter invert opacity-80 pointer-events-none" />
                           </div>
@@ -604,7 +604,7 @@ export default function AdminDashboard({
 
                         <div className="p-2 border border-slate-850 rounded-xl bg-slate-950/40 text-center">
                           <span className="text-[7px] text-slate-500 uppercase font-mono block">Za Zprostředkovatele</span>
-                          <span className="text-[8px] text-slate-450 font-mono block mt-0.5">V {selectedUser.mediation_location || '__________'} dne: {selectedUser.mediation_signed_at ? new Date(selectedUser.mediation_signed_at).toLocaleDateString('cs-CZ') : 'Neuvedeno'}</span>
+                          <span className="text-[8px] text-slate-400 font-mono block mt-0.5">V {selectedUser.mediation_location || '__________'} dne: {selectedUser.mediation_signed_at ? new Date(selectedUser.mediation_signed_at).toLocaleDateString('cs-CZ') : 'Neuvedeno'}</span>
                           <div className="h-10 flex items-center justify-center mt-1 text-treetino-light">
                             {selectedUser.mediation_signature ? (
                               <div 

@@ -507,7 +507,7 @@ export default function NdaModal({ activeUser, onNdaSigned }: Props) {
           <div className="flex items-center justify-between gap-4 border-t border-slate-900 pt-3">
             <div className="flex-1">
               {error && (
-                <div className="text-[10px] font-semibold text-rose-450 flex items-center gap-1">
+                <div className="text-[10px] font-semibold text-rose-400 flex items-center gap-1">
                   <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
                   <span>{error}</span>
                 </div>
