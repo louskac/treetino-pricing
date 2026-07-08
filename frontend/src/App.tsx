@@ -28,6 +28,7 @@ import CrmPanel from './components/CrmPanel';
 import LoginScreen from './components/LoginScreen';
 import AdminDashboard from './components/AdminDashboard';
 import NdaModal from './components/NdaModal';
+import MediationModal from './components/MediationModal';
 // @ts-ignore
 import RotatingText from './components/reactbits/RotatingText/RotatingText';
 // @ts-ignore
@@ -308,6 +309,24 @@ export default function App() {
       <NdaModal
         activeUser={activeUser}
         onNdaSigned={(updatedUser) => {
+          setActiveUser(updatedUser);
+          const isRemembered = localStorage.getItem('treetino_user') !== null;
+          if (isRemembered) {
+            localStorage.setItem('treetino_user', JSON.stringify(updatedUser));
+          } else {
+            sessionStorage.setItem('treetino_user', JSON.stringify(updatedUser));
+          }
+        }}
+      />
+    );
+  }
+
+  // ─── Show Mediation Agreement Sign Screen if NDA is signed but mediation isn't signed yet (bypass for superadmin) ─────
+  if (activeUser && activeUser.nda_signed && !activeUser.mediation_signed && activeUser.is_superadmin !== 1) {
+    return (
+      <MediationModal
+        activeUser={activeUser}
+        onMediationSigned={(updatedUser) => {
           setActiveUser(updatedUser);
           const isRemembered = localStorage.getItem('treetino_user') !== null;
           if (isRemembered) {

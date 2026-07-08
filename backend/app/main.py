@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 import httpx
 from .calculator import calculate_roi, CalculatorParams
-from .pdf_generator import generate_pdf, generate_nda_pdf
+from .pdf_generator import generate_pdf, generate_nda_pdf, generate_mediation_pdf
 from .db import (
     init_db,
     get_partners,
@@ -92,6 +92,14 @@ class SignNdaRequest(BaseModel):
     representative: str
     location: str
 
+class SignMediationRequest(BaseModel):
+    signature: str
+    company: str
+    ico_dob: str
+    address: str
+    representative: str
+    location: str
+
 router = APIRouter()
 
 # ─── CRM & Partner Portal Endpoints ───
@@ -143,7 +151,34 @@ def handle_sign_nda(user_id: int, req: SignNdaRequest):
         
         # Return updated user profile
         row = conn.execute("""
-            SELECT u.id, u.username, u.tier, u.partner_id, u.is_superadmin, u.nda_signed, u.nda_signed_at, u.nda_signature, u.nda_company, u.nda_ico_dob, u.nda_address, u.nda_representative, u.nda_location, p.name as partner_name
+            SELECT u.*, p.name as partner_name
+            FROM users u
+            LEFT JOIN partners p ON u.partner_id = p.id
+            WHERE u.id = ?;
+        """, (user_id,)).fetchone()
+        return dict(row) if row else None
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/users/{user_id}/sign-mediation")
+def handle_sign_mediation(user_id: int, req: SignMediationRequest):
+    try:
+        conn = get_db_connection()
+        user = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+        if not user:
+            raise HTTPException(status_code=404, detail="Uživatel nenalezen")
+        
+        signed_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        conn.execute("""
+            UPDATE users 
+            SET mediation_signed = 1, mediation_signed_at = ?, mediation_signature = ?, mediation_company = ?, mediation_ico_dob = ?, mediation_address = ?, mediation_representative = ?, mediation_location = ?
+            WHERE id = ?;
+        """, (signed_at, req.signature, req.company, req.ico_dob, req.address, req.representative, req.location, user_id))
+        conn.commit()
+        
+        # Return updated user profile
+        row = conn.execute("""
+            SELECT u.*, p.name as partner_name
             FROM users u
             LEFT JOIN partners p ON u.partner_id = p.id
             WHERE u.id = ?;
@@ -183,7 +218,7 @@ def read_admin_users(user_id: int = Query(...)):
             
             # Fetch all users
             rows = conn.execute("""
-                SELECT u.id, u.username, u.tier, u.partner_id, u.is_superadmin, u.nda_signed, u.nda_signed_at, u.nda_signature, u.nda_company, u.nda_ico_dob, u.nda_address, u.nda_representative, u.nda_location, p.name as partner_name
+                SELECT u.*, p.name as partner_name
                 FROM users u
                 LEFT JOIN partners p ON u.partner_id = p.id
             """).fetchall()
@@ -451,6 +486,31 @@ def download_user_nda(user_id: int):
         pdf_bytes = generate_nda_pdf(user_data)
         
         filename = f"NDA_Treetino_{user_data['username']}.pdf"
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f"attachment; filename={filename}"
+            }
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/users/{user_id}/mediation/download")
+def download_user_mediation(user_id: int):
+    try:
+        conn = get_db_connection()
+        user = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+        if not user:
+            raise HTTPException(status_code=404, detail="Uživatel nenalezen")
+        
+        if not user["mediation_signed"]:
+            raise HTTPException(status_code=400, detail="Smlouva o zprostředkování nebyla tímto uživatelem dosud podepsána.")
+        
+        user_data = dict(user)
+        pdf_bytes = generate_mediation_pdf(user_data)
+        
+        filename = f"Smlouva_Zprostredkovani_Treetino_{user_data['username']}.pdf"
         return Response(
             content=pdf_bytes,
             media_type="application/pdf",

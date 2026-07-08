@@ -145,6 +145,14 @@ export interface User {
     nda_address?: string | null;
     nda_representative?: string | null;
     nda_location?: string | null;
+    mediation_signed?: number;
+    mediation_signed_at?: string | null;
+    mediation_signature?: string | null;
+    mediation_company?: string | null;
+    mediation_ico_dob?: string | null;
+    mediation_address?: string | null;
+    mediation_representative?: string | null;
+    mediation_location?: string | null;
 }
 
 export interface DealConfig {

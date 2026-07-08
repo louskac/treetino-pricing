@@ -46,6 +46,14 @@ def init_db():
         nda_address TEXT,
         nda_representative TEXT,
         nda_location TEXT,
+        mediation_signed INTEGER DEFAULT 0,
+        mediation_signed_at TEXT,
+        mediation_signature TEXT,
+        mediation_company TEXT,
+        mediation_ico_dob TEXT,
+        mediation_address TEXT,
+        mediation_representative TEXT,
+        mediation_location TEXT,
         FOREIGN KEY (partner_id) REFERENCES partners(id) ON DELETE SET NULL
     );
     """)
@@ -79,6 +87,30 @@ def init_db():
         conn.commit()
     if "nda_location" not in columns:
         cursor.execute("ALTER TABLE users ADD COLUMN nda_location TEXT;")
+        conn.commit()
+    if "mediation_signed" not in columns:
+        cursor.execute("ALTER TABLE users ADD COLUMN mediation_signed INTEGER DEFAULT 0;")
+        conn.commit()
+    if "mediation_signed_at" not in columns:
+        cursor.execute("ALTER TABLE users ADD COLUMN mediation_signed_at TEXT;")
+        conn.commit()
+    if "mediation_signature" not in columns:
+        cursor.execute("ALTER TABLE users ADD COLUMN mediation_signature TEXT;")
+        conn.commit()
+    if "mediation_company" not in columns:
+        cursor.execute("ALTER TABLE users ADD COLUMN mediation_company TEXT;")
+        conn.commit()
+    if "mediation_ico_dob" not in columns:
+        cursor.execute("ALTER TABLE users ADD COLUMN mediation_ico_dob TEXT;")
+        conn.commit()
+    if "mediation_address" not in columns:
+        cursor.execute("ALTER TABLE users ADD COLUMN mediation_address TEXT;")
+        conn.commit()
+    if "mediation_representative" not in columns:
+        cursor.execute("ALTER TABLE users ADD COLUMN mediation_representative TEXT;")
+        conn.commit()
+    if "mediation_location" not in columns:
+        cursor.execute("ALTER TABLE users ADD COLUMN mediation_location TEXT;")
         conn.commit()
 
     # 3. Create Deals
@@ -167,9 +199,17 @@ def init_db():
     superadmin_exists = conn.execute("SELECT COUNT(*) FROM users WHERE username = ?;", ("superadmin",)).fetchone()[0]
     if superadmin_exists == 0:
         cursor.execute("""
-            INSERT INTO users (username, password, tier, partner_id, is_superadmin, nda_signed, nda_signed_at, nda_signature, nda_company, nda_ico_dob, nda_address, nda_representative, nda_location)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
-        """, ("superadmin", "Fuck1ngUn1c0rn!", "Platinum", None, 1, 1, "2026-07-07 20:00:00", "Dominik Mašek", "Treetino corp s.r.o.", "10800107", "Vlčetín 62, Bílá 463 43", "Dominik Mašek", "Praha"))
+            INSERT INTO users (
+                username, password, tier, partner_id, is_superadmin, 
+                nda_signed, nda_signed_at, nda_signature, nda_company, nda_ico_dob, nda_address, nda_representative, nda_location,
+                mediation_signed, mediation_signed_at, mediation_signature, mediation_company, mediation_ico_dob, mediation_address, mediation_representative, mediation_location
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+        """, (
+            "superadmin", "Fuck1ngUn1c0rn!", "Platinum", None, 1, 
+            1, "2026-07-07 20:00:00", "Dominik Mašek", "Treetino corp s.r.o.", "10800107", "Vlčetín 62, Bílá 463 43", "Dominik Mašek", "Praha",
+            1, "2026-07-07 20:00:00", "Dominik Mašek", "Treetino corp s.r.o.", "10800107", "Vlčetín 62, Bílá 463 43", "Dominik Mašek", "Praha"
+        ))
         conn.commit()
 
     conn.close()

@@ -1967,3 +1967,267 @@ def generate_nda_pdf(user_data: dict) -> bytes:
     pdf_bytes = buffer.getvalue()
     buffer.close()
     return pdf_bytes
+
+
+# ─── Mediation Agreement PDF Generator ───
+
+def generate_mediation_pdf(user_data: dict) -> bytes:
+    import io
+    from datetime import datetime
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, KeepTogether, Image
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    
+    buffer = io.BytesIO()
+    
+    # Register fonts path
+    fonts_path = os.path.join(os.path.dirname(__file__), "fonts")
+    try:
+        pdfmetrics.registerFont(TTFont("Roboto", os.path.join(fonts_path, "Roboto-Regular.ttf")))
+        pdfmetrics.registerFont(TTFont("Roboto-Bold", os.path.join(fonts_path, "Roboto-Bold.ttf")))
+    except:
+        pass
+        
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=50,
+        leftMargin=50,
+        topMargin=45,
+        bottomMargin=45
+    )
+    
+    styles = getSampleStyleSheet()
+    
+    # Custom styles
+    title_style = ParagraphStyle(
+        'MediationTitle',
+        parent=styles['Normal'],
+        fontName='Roboto-Bold',
+        fontSize=13,
+        leading=16,
+        alignment=1, # Center
+        textColor=colors.HexColor('#1e3a8a'),
+        spaceAfter=5
+    )
+    
+    subtitle_style = ParagraphStyle(
+        'MediationSubTitle',
+        parent=styles['Normal'],
+        fontName='Roboto',
+        fontSize=8,
+        leading=10,
+        alignment=1, # Center
+        textColor=colors.HexColor('#475569'),
+        spaceAfter=15
+    )
+    
+    section_title = ParagraphStyle(
+        'MediationSectionTitle',
+        parent=styles['Normal'],
+        fontName='Roboto-Bold',
+        fontSize=9.5,
+        leading=12,
+        textColor=colors.HexColor('#1e3a8a'),
+        spaceBefore=12,
+        spaceAfter=6
+    )
+    
+    body_style = ParagraphStyle(
+        'MediationBody',
+        parent=styles['Normal'],
+        fontName='Roboto',
+        fontSize=8.5,
+        leading=12.5,
+        textColor=colors.HexColor('#1e293b'),
+        spaceAfter=6
+    )
+    
+    table_label_style = ParagraphStyle(
+        'MediationTableLabel',
+        parent=styles['Normal'],
+        fontName='Roboto-Bold',
+        fontSize=8.5,
+        leading=10,
+        textColor=colors.HexColor('#1e3a8a')
+    )
+    
+    table_text_style = ParagraphStyle(
+        'MediationTableText',
+        parent=styles['Normal'],
+        fontName='Roboto',
+        fontSize=8.5,
+        leading=10,
+        textColor=colors.HexColor('#1e293b')
+    )
+
+    story = []
+    
+    # 1. Document Title
+    story.append(Paragraph("SMLOUVA O ZPROSTŘEDKOVÁNÍ", title_style))
+    story.append(Paragraph("uzavřená podle § 2445 a násl. zákona č. 89/2012 Sb., občanský zákoník, ve znění pozdějších předpisů", subtitle_style))
+    
+    # 2. Section I: Smluvni strany
+    story.append(Paragraph("I. Smluvní strany", section_title))
+    
+    # Draw Poskytovatel Table (Zájemce)
+    poskytovatel_data = [
+        [Paragraph("1. Zájemce:", table_label_style), ""],
+        [Paragraph("Obchodní firma:", table_text_style), Paragraph("Treetino corp s.r.o.", table_text_style)],
+        [Paragraph("IČO:", table_text_style), Paragraph("10800107", table_text_style)],
+        [Paragraph("DIČ:", table_text_style), Paragraph("CZ10800107", table_text_style)],
+        [Paragraph("Sídlo:", table_text_style), Paragraph("Bílá - Vlčetín 62, 463 43 Bílá", table_text_style)],
+        [Paragraph("Zastoupená:", table_text_style), Paragraph("Dominikem Maškem, jednatel", table_text_style)]
+    ]
+    t1 = Table(poskytovatel_data, colWidths=[110, 385])
+    t1.setStyle(TableStyle([
+        ('SPAN', (0, 0), (1, 0)),
+        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f8fafc')),
+        ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor('#e2e8f0')),
+        ('PADDING', (0, 0), (-1, -1), 3),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+    ]))
+    story.append(t1)
+    story.append(Spacer(1, 6))
+    
+    # Draw Prijemce Table (Zprostředkovatel)
+    prijemce_data = [
+        [Paragraph("2. Zprostředkovatel:", table_label_style), ""],
+        [Paragraph("Jméno / Firma:", table_text_style), Paragraph(user_data.get('mediation_company') or user_data.get('username') or '', table_text_style)],
+        [Paragraph("IČO / Datum nar.:", table_text_style), Paragraph(user_data.get('mediation_ico_dob') or '', table_text_style)],
+        [Paragraph("Sídlo / Bydliště:", table_text_style), Paragraph(user_data.get('mediation_address') or '', table_text_style)],
+        [Paragraph("Zastoupen/a:", table_text_style), Paragraph(user_data.get('mediation_representative') or '', table_text_style)]
+    ]
+    t2 = Table(prijemce_data, colWidths=[110, 385])
+    t2.setStyle(TableStyle([
+        ('SPAN', (0, 0), (1, 0)),
+        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f8fafc')),
+        ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor('#e2e8f0')),
+        ('PADDING', (0, 0), (-1, -1), 3),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+    ]))
+    story.append(t2)
+    story.append(Spacer(1, 8))
+    
+    story.append(Paragraph("(Zájemce a Zprostředkovatel dále společně též jako „Smluvní strany“)", body_style))
+    story.append(Paragraph("Smluvní strany uzavírají níže uvedeného dne, měsíce a roku tuto Smlouvu o zprostředkování (dále jen „smlouva“).", body_style))
+    
+    # 3. Clauses
+    story.append(Paragraph("II. Předmět smlouvy", section_title))
+    story.append(Paragraph("2.1. Zprostředkovatel se touto smlouvou zavazuje, že bude vyvíjet činnost směřující k tomu, aby Zájemce měl příležitost uzavřít s třetími osobami (dále jen „Klienti“) kupní smlouvy nebo smlouvy o dílo na dodávku produktů Zájemce.", body_style))
+    story.append(Paragraph("2.2. Předmětem zprostředkování jsou výhradně inovativní produkty Zájemce prezentované na webové stránce www.treetino.eu, a to konkrétně chytré stromy <b>Treetino V1</b>, <b>Treetino V2</b> a <b>Větrná turbína</b> (dále jen „Produkty“).", body_style))
+    story.append(Paragraph("2.3. Zprostředkovatel je oprávněn Produkty aktivně nabízet a vyhledávat zájemce. Zprostředkovatel však není bez předchozí písemné plné moci oprávněn za Zájemce uzavírat jakékoliv smlouvy ani přijímat plnění.", body_style))
+    
+    story.append(Paragraph("III. Provize a platební podmínky", section_title))
+    story.append(Paragraph("3.1. Za obstarání příležitosti k uzavření smlouvy s Klientem náleží Zprostředkovateli provize ve výši <b>3 % z čisté prodejní ceny bez DPH</b> u každého takto realizovaného obchodu. Nárok na tuto provizi vzniká Zprostředkovateli ve stejné výši i v případě, že pouze zajistí kontakt na Klienta a samotné smluvní jednání (prodej) dokončí Zájemce.", body_style))
+    story.append(Paragraph("3.2. Nárok na provizi vzniká Zprostředkovateli výlučně v okamžiku, kdy Klient v plné výši uhradí Zájemci první vystavenou fakturu (např. zálohou fakturu či fakturu za první etapu plnění) vztahující se k danému obchodu.", body_style))
+    story.append(Paragraph("3.3. Provize je splatná na základě daňového dokladu (faktury) řádně vystaveného Zprostředkovatelem. Lhůta splatnosti činí 14 dnů ode dne, kdy byla příslušná platba od Klienta prokazatelně připsána na bankovní účet Zájemce.", body_style))
+
+    story.append(Paragraph("IV. Dohoda o mlčenlivosti (NDA) a ochrana práv", section_title))
+    story.append(Paragraph("4.1. Zprostředkovatel výslovně bere na vědomí, že Produkty podléhají patentové ochraně a ochraně průmyslových vzorů, k nimž vykonává práva Zájemce. Zprostředkovatel nesmí Produkty jakýmkoliv způsobem napodobovat, zpětně analyzovat za účelem zjištění jejich konstrukce (reverse engineering), ani k takovému jednání poskytnout součinnost třetí straně.", body_style))
+    story.append(Paragraph("4.2. Veškeré obchodní, technické a finanční informace, včetně informací o klientech, obchodních strategiích a cenotvorbě, se kterými se Zprostředkovatel při své činnosti seznámí, mají povahu důvěrných informací tvořících obchodní tajemství Zájemce.", body_style))
+    story.append(Paragraph("4.3. Zprostředkovatel se zavazuje zachovávat absolutní mlčenlivost ohledně všech důvěrných informací. Tento závazek trvá po celou dobu trvání této smlouvy a dále po dobu 5 (pěti) let po jejím ukončení.", body_style))
+
+    story.append(Paragraph("V. Smluvní pokuty a náhrada škody", section_title))
+    story.append(Paragraph("5.1. V případě porušení jakékoliv povinnosti stanovené v čl. IV. této smlouvy ze strany Zprostředkovatele je Zprostředkovatel povinen uhradit Zájemci smluvní pokutu ve výši <b>500 000 Kč</b> (slovy: pět set tisíc korun českých) za každé jednotlivé porušení.", body_style))
+    story.append(Paragraph("5.2. Ujednáním o smluvní pokutě ani jejím zaplacením není nijak dotčen nárok Zájemce na náhradu škody v plné výši, přesahuje-li výše škody sjednanou smluvní pokutu.", body_style))
+    
+    story.append(Paragraph("VI. Závěrečná ustanovení", section_title))
+    story.append(Paragraph("6.1. Tato smlouva se uzavírá na dobu neurčitou. Smlouvu lze ukončit písemnou výpovědí kteroukoliv ze Smluvních stran i bez udání důvodu. Výpovědní doba činí 1 měsíc a počíná běžet prvním dnem kalendářního měsíce následujícího po doručení výpovědi druhé Smluvní straně.", body_style))
+    story.append(Paragraph("6.2. Právní vztahy touto smlouvou výslovně neupravené se řídí příslušnými ustanoveními zákona č. 89/2012 Sb., občanský zákoník, v platném znění.", body_style))
+    story.append(Paragraph("6.3. Smlouva je sepsána ve dvou vyhotoveních s platností originálu, z nichž každá Smluvní strana obdrží po jednom vyhotovení.", body_style))
+    story.append(Paragraph("6.4. Smluvní strany prohlašují, že si tuto smlouvu před jejím podpisem přečetly, že byla uzavřena po vzájemném projednání, podle jejich pravé a svobodné vůle, určitě, vážně a srozumitelně, na důkaz čehož připojují své podpisy.", body_style))
+    
+    story.append(Spacer(1, 10))
+    
+    # 4. Signatures Box (using KeepTogether to prevent separation)
+    sig_date_style = ParagraphStyle(
+        'MediationSigDate',
+        parent=styles['Normal'],
+        fontName='Roboto',
+        fontSize=8,
+        leading=10,
+        textColor=colors.HexColor('#475569'),
+        spaceAfter=5
+    )
+    
+    sig_title_style = ParagraphStyle(
+        'MediationSigTitle',
+        parent=styles['Normal'],
+        fontName='Roboto-Bold',
+        fontSize=8.5,
+        leading=11,
+        textColor=colors.HexColor('#1e3a8a')
+    )
+    
+    sig_name_style = ParagraphStyle(
+        'MediationSigName',
+        parent=styles['Normal'],
+        fontName='Roboto',
+        fontSize=8.5,
+        leading=11,
+        textColor=colors.HexColor('#1e293b')
+    )
+
+    # Dominik Masek Signature image handling
+    masek_sig_flowable = ""
+    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+    masek_sig_path = os.path.join(base_dir, "frontend", "public", "branding", "signature_masek_2.png")
+    if os.path.exists(masek_sig_path):
+        masek_sig_flowable = Image(masek_sig_path, width=110, height=40)
+    
+    # Partner Canvas SVG signature path drawing flowable
+    partner_sig_svg = user_data.get('mediation_signature') or ''
+    partner_sig_flowable = SvgSignatureFlowable(partner_sig_svg, width=150, height=50)
+    
+    formatted_sign_date = '29.06.2026'
+    if user_data.get('mediation_signed_at'):
+        try:
+            # Parse YYYY-MM-DD HH:MM:SS to cs-CZ locale
+            dt = datetime.strptime(user_data.get('mediation_signed_at'), "%Y-%m-%d %H:%M:%S")
+            formatted_sign_date = f"{dt.day}. {dt.month}. {dt.year}"
+        except:
+            formatted_sign_date = user_data.get('mediation_signed_at')
+
+    # Date headers directly above the signature box table
+    sig_table_data = [
+        [
+            Paragraph(f"V Praze dne: {formatted_sign_date}", sig_date_style),
+            Paragraph(f"V {user_data.get('mediation_location') or '__________'} dne: {formatted_sign_date}", sig_date_style)
+        ],
+        [
+            masek_sig_flowable,
+            partner_sig_flowable
+        ],
+        [
+            Paragraph("Za Zájemce (Treetino corp s.r.o.):", sig_title_style),
+            Paragraph("Za Zprostředkovatele:", sig_title_style)
+        ],
+        [
+            Paragraph("Dominik Mašek (jednatel)", sig_name_style),
+            Paragraph(user_data.get('mediation_company') or user_data.get('username') or '', sig_name_style)
+        ],
+        [
+            "",
+            Paragraph(f"Zastoupen: {user_data.get('mediation_representative') or ''}", sig_name_style)
+        ]
+    ]
+    
+    sig_table = Table(sig_table_data, colWidths=[240, 255])
+    sig_table.setStyle(TableStyle([
+        ('LINEBELOW', (0, 0), (0, 0), 0.5, colors.HexColor('#cbd5e1')),
+        ('LINEBELOW', (1, 0), (1, 0), 0.5, colors.HexColor('#cbd5e1')),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 3),
+        ('TOPPADDING', (0, 1), (-1, 1), 6),
+        ('BOTTOMPADDING', (0, 1), (-1, 1), 6),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+    ]))
+    
+    story.append(KeepTogether([sig_table]))
+    
+    doc.build(story)
+    pdf_bytes = buffer.getvalue()
+    buffer.close()
+    return pdf_bytes

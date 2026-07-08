@@ -276,7 +276,7 @@ export default function AdminDashboard({
                       <th className="py-3 px-5 text-center">Obchody</th>
                       <th className="py-3 px-5 text-right">Celkový Obrát</th>
                       <th className="py-3 px-5 text-right">Provize</th>
-                      <th className="py-3 px-5 text-center">NDA Status</th>
+                      <th className="py-3 px-5 text-center">Smlouvy</th>
                       <th className="py-3 px-5 text-right">Detail</th>
                     </tr>
                   </thead>
@@ -317,15 +317,27 @@ export default function AdminDashboard({
                             <td className="py-3.5 px-5 text-right text-white font-semibold">{formatMoney(u.total_deal_value)}</td>
                             <td className="py-3.5 px-5 text-right text-treetino-light font-semibold">{formatMoney(u.total_commission)}</td>
                             <td className="py-3.5 px-5 text-center">
-                              {u.nda_signed ? (
-                                <span className="text-[9px] text-emerald-450 font-bold bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full select-none" title={`Podepsáno: ${u.nda_signed_at}\nPodpis: "${u.nda_signature}"`}>
-                                  Podepsáno
-                                </span>
-                              ) : (
-                                <span className="text-[9px] text-rose-450 font-bold bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 rounded-full select-none">
-                                  Chybí
-                                </span>
-                              )}
+                              <div className="flex items-center justify-center gap-1.5">
+                                {u.nda_signed ? (
+                                  <span className="text-[8px] text-emerald-450 font-bold bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded-md select-none" title={`NDA podepsáno: ${u.nda_signed_at}`}>
+                                    NDA ✓
+                                  </span>
+                                ) : (
+                                  <span className="text-[8px] text-rose-450 font-bold bg-rose-500/10 border border-rose-500/20 px-1.5 py-0.5 rounded-md select-none">
+                                    NDA ✗
+                                  </span>
+                                )}
+
+                                {u.mediation_signed ? (
+                                  <span className="text-[8px] text-emerald-450 font-bold bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded-md select-none" title={`Smlouva podepsána: ${u.mediation_signed_at}`}>
+                                    Smlouva ✓
+                                  </span>
+                                ) : (
+                                  <span className="text-[8px] text-rose-450 font-bold bg-rose-500/10 border border-rose-500/20 px-1.5 py-0.5 rounded-md select-none">
+                                    Smlouva ✗
+                                  </span>
+                                )}
+                              </div>
                             </td>
                             <td className="py-3.5 px-5 text-right">
                               <button
@@ -526,6 +538,91 @@ export default function AdminDashboard({
                   ) : (
                     <p className="text-[11px] text-slate-400 font-sans leading-normal">
                       Partner dosud nepodepsal dohodu o mlčenlivosti (NDA). Přístup k exportům a klientským detailům bude zablokován, dokud dohodu nepotvrdí.
+                    </p>
+                  )}
+                </div>
+
+                {/* Mediation Signature Details */}
+                <div className="p-4 rounded-2xl bg-slate-950/40 border border-slate-850 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-white uppercase tracking-widest font-mono">Smlouva o Zprostředkování</span>
+                    <span className={`text-[8px] font-bold px-2 py-0.5 rounded border ${
+                      selectedUser.mediation_signed 
+                        ? 'bg-emerald-500/10 text-emerald-450 border-emerald-500/20' 
+                        : 'bg-rose-500/10 text-rose-450 border-rose-500/20'
+                    }`}>
+                      {selectedUser.mediation_signed ? 'PODEPSÁNO' : 'NEPODEPSÁNO'}
+                    </span>
+                  </div>
+                  
+                  {selectedUser.mediation_signed ? (
+                    <div className="text-[11px] space-y-3 font-mono text-slate-300 bg-slate-950/30 p-3.5 rounded-2xl border border-slate-900/60">
+                      <div className="grid grid-cols-2 gap-2 text-[10px] pb-2 border-b border-slate-900">
+                        <div>
+                          <span className="text-slate-500 block text-[8px] uppercase tracking-wider font-bold">Firma / Jméno</span>
+                          <span className="text-white font-bold">{selectedUser.mediation_company || 'Neuvedeno'}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500 block text-[8px] uppercase tracking-wider font-bold">IČO / Datum nar.</span>
+                          <span className="text-white font-bold">{selectedUser.mediation_ico_dob || 'Neuvedeno'}</span>
+                        </div>
+                        <div className="col-span-2">
+                          <span className="text-slate-500 block text-[8px] uppercase tracking-wider font-bold">Sídlo / Bydliště</span>
+                          <span className="text-white font-bold">{selectedUser.mediation_address || 'Neuvedeno'}</span>
+                        </div>
+                        <div className="col-span-2">
+                          <span className="text-slate-500 block text-[8px] uppercase tracking-wider font-bold">Zástupce</span>
+                          <span className="text-white font-bold">{selectedUser.mediation_representative || 'Neuvedeno'}</span>
+                        </div>
+                      </div>
+                      
+                      <div className="text-[10px]">
+                        Podepsáno dne: <strong className="text-white">{selectedUser.mediation_signed_at || 'Neuvedeno'}</strong>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3 pt-1">
+                        <div className="p-2 border border-slate-850 rounded-xl bg-slate-950/40 text-center">
+                          <span className="text-[7px] text-slate-500 uppercase font-mono block">Za Treetino corp s.r.o.</span>
+                          <span className="text-[8px] text-slate-450 font-mono block mt-0.5">V Praze dne: {selectedUser.mediation_signed_at ? new Date(selectedUser.mediation_signed_at).toLocaleDateString('cs-CZ') : 'Neuvedeno'}</span>
+                          <div className="h-10 flex items-center justify-center mt-1">
+                            <img src="/branding/signature_masek_2.png" alt="Dominik Masek Signature" className="h-8 object-contain filter invert opacity-80 pointer-events-none" />
+                          </div>
+                        </div>
+
+                        <div className="p-2 border border-slate-850 rounded-xl bg-slate-950/40 text-center">
+                          <span className="text-[7px] text-slate-500 uppercase font-mono block">Za Zprostředkovatele</span>
+                          <span className="text-[8px] text-slate-450 font-mono block mt-0.5">V {selectedUser.mediation_location || '__________'} dne: {selectedUser.mediation_signed_at ? new Date(selectedUser.mediation_signed_at).toLocaleDateString('cs-CZ') : 'Neuvedeno'}</span>
+                          <div className="h-10 flex items-center justify-center mt-1 text-treetino-light">
+                            {selectedUser.mediation_signature ? (
+                              <div 
+                                className="w-full h-full max-h-8 flex items-center justify-center"
+                                dangerouslySetInnerHTML={{ __html: selectedUser.mediation_signature }} 
+                              />
+                            ) : (
+                              <span className="text-[9px] text-slate-600 italic">Podpis chybí</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="border-t border-slate-900 pt-2 flex flex-col gap-2 text-center font-sans">
+                        <span className="text-[9px] text-slate-500">
+                          Kryptografický otisk podpisu ověřen a zanesen do archivu.
+                        </span>
+                        <div className="flex justify-center mt-1">
+                          <a
+                            href={`${BACKEND_URL}/users/${selectedUser.id}/mediation/download`}
+                            download={`Smlouva_Zprostredkovani_Treetino_${selectedUser.username}.pdf`}
+                            className="bg-treetino-light/10 hover:bg-treetino-light/20 text-treetino-light border border-treetino-light/20 text-[9px] font-bold px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5"
+                          >
+                            Stáhnout podepsanou smlouvu (PDF)
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-[11px] text-slate-400 font-sans leading-normal">
+                      Partner dosud nepodepsal smlouvu o zprostředkování. Přístup k exportům a klientským detailům bude zablokován, dokud dohodu nepotvrdí.
                     </p>
                   )}
                 </div>
