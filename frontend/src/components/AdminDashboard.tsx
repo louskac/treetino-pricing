@@ -269,15 +269,15 @@ export default function AdminDashboard({
               ) : (
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
-                    <tr className="border-b border-slate-900/60 bg-slate-950/20 text-slate-450 font-bold uppercase tracking-wider text-[9px] sticky top-0 z-10">
-                      <th className="py-3 px-5">Uživatelské jméno</th>
-                      <th className="py-3 px-5">Tier</th>
-                      <th className="py-3 px-5">Organizace</th>
-                      <th className="py-3 px-5 text-center">Obchody</th>
-                      <th className="py-3 px-5 text-right">Celkový Obrát</th>
-                      <th className="py-3 px-5 text-right">Provize</th>
-                      <th className="py-3 px-5 text-center">Smlouvy</th>
-                      <th className="py-3 px-5 text-right">Detail</th>
+                    <tr className="border-b border-slate-900/60 bg-slate-950/20 text-slate-450 font-bold uppercase tracking-wider text-[9px] sticky top-0 z-10 select-none">
+                      <th className="py-3 px-4 w-[22%]">Uživatelské jméno</th>
+                      <th className="py-3 px-4 w-[8%]">Tier</th>
+                      <th className="py-3 px-4 w-[20%]">Organizace</th>
+                      <th className="py-3 px-4 w-[10%] text-center">Obchody</th>
+                      <th className="py-3 px-4 w-[14%] text-right">Celkový Obrát</th>
+                      <th className="py-3 px-4 w-[14%] text-right">Provize</th>
+                      <th className="py-3 px-4 w-[9%] text-center">Smlouvy</th>
+                      <th className="py-3 px-4 w-[3%] text-right">Detail</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-900/80 font-mono">
@@ -301,50 +301,63 @@ export default function AdminDashboard({
                             key={u.id} 
                             className="hover:bg-slate-900/40 border-l border-l-transparent hover:border-l-treetino-light transition-all"
                           >
-                            <td className="py-3.5 px-5">
-                              <div className="flex items-center gap-2.5">
+                            <td className="py-2.5 px-4 w-[22%]">
+                              <div className="flex items-center gap-2">
                                 <UserAvatar name={u.username} />
-                                <span className="font-sans font-bold text-white">{u.username}</span>
+                                <span className="font-sans font-bold text-white truncate max-w-[110px]">{u.username}</span>
                               </div>
                             </td>
-                            <td className="py-3.5 px-5">
+                            <td className="py-2.5 px-4 w-[8%]">
                               <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded border ${getTierStyles(u.tier, u.is_superadmin)}`}>
                                 {u.is_superadmin ? 'ADMIN' : u.tier.toUpperCase()}
                               </span>
                             </td>
-                            <td className="py-3.5 px-5 font-sans text-slate-350">{u.partner_name || 'Nezávislý Partner'}</td>
-                            <td className="py-3.5 px-5 text-center text-white font-bold">{u.deal_count}</td>
-                            <td className="py-3.5 px-5 text-right text-white font-semibold">{formatMoney(u.total_deal_value)}</td>
-                            <td className="py-3.5 px-5 text-right text-treetino-light font-semibold">{formatMoney(u.total_commission)}</td>
-                            <td className="py-3.5 px-5 text-center">
-                              <div className="flex items-center justify-center gap-1.5">
+                            <td className="py-2.5 px-4 w-[20%] font-sans text-slate-350 truncate max-w-[120px]">{u.partner_name || 'Nezávislý Partner'}</td>
+                            <td className="py-2.5 px-4 w-[10%] text-center text-white font-bold">{u.deal_count}</td>
+                            <td className="py-2.5 px-4 w-[14%] text-right text-white font-semibold whitespace-nowrap">{formatMoney(u.total_deal_value)}</td>
+                            <td className="py-2.5 px-4 w-[14%] text-right text-treetino-light font-semibold whitespace-nowrap">{formatMoney(u.total_commission)}</td>
+                            <td className="py-2.5 px-4 w-[9%] text-center">
+                              <div className="flex items-center justify-center gap-2">
                                 {u.nda_signed ? (
-                                  <span className="text-[8px] text-emerald-450 font-bold bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded-md select-none" title={`NDA podepsáno: ${u.nda_signed_at}`}>
-                                    NDA ✓
-                                  </span>
+                                  <div 
+                                    className="p-1 bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 rounded-md cursor-help transition-all hover:bg-emerald-500/25" 
+                                    title={`NDA podepsáno: ${u.nda_signed_at}`}
+                                  >
+                                    <FileText className="w-3.5 h-3.5" />
+                                  </div>
                                 ) : (
-                                  <span className="text-[8px] text-rose-450 font-bold bg-rose-500/10 border border-rose-500/20 px-1.5 py-0.5 rounded-md select-none">
-                                    NDA ✗
-                                  </span>
+                                  <div 
+                                    className="p-1 bg-rose-500/10 text-rose-450 border border-rose-500/10 rounded-md cursor-help opacity-60 hover:opacity-100 transition-opacity"
+                                    title="NDA chybí"
+                                  >
+                                    <FileText className="w-3.5 h-3.5" />
+                                  </div>
                                 )}
 
                                 {u.mediation_signed ? (
-                                  <span className="text-[8px] text-emerald-450 font-bold bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded-md select-none" title={`Smlouva podepsána: ${u.mediation_signed_at}`}>
-                                    Smlouva ✓
-                                  </span>
+                                  <div 
+                                    className="p-1 bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 rounded-md cursor-help transition-all hover:bg-emerald-500/25" 
+                                    title={`Smlouva o zprostředkování podepsána: ${u.mediation_signed_at}`}
+                                  >
+                                    <Briefcase className="w-3.5 h-3.5" />
+                                  </div>
                                 ) : (
-                                  <span className="text-[8px] text-rose-450 font-bold bg-rose-500/10 border border-rose-500/20 px-1.5 py-0.5 rounded-md select-none">
-                                    Smlouva ✗
-                                  </span>
+                                  <div 
+                                    className="p-1 bg-rose-500/10 text-rose-450 border border-rose-500/10 rounded-md cursor-help opacity-60 hover:opacity-100 transition-opacity"
+                                    title="Smlouva o zprostředkování chybí"
+                                  >
+                                    <Briefcase className="w-3.5 h-3.5" />
+                                  </div>
                                 )}
                               </div>
                             </td>
-                            <td className="py-3.5 px-5 text-right">
+                            <td className="py-2.5 px-4 w-[3%] text-right">
                               <button
                                 onClick={() => setSelectedUser(u)}
-                                className="text-treetino-light hover:text-[#58cca8] hover:underline font-sans font-bold text-xs transition-colors pr-2"
+                                className="bg-treetino-light/10 hover:bg-treetino-light text-treetino-light hover:text-slate-950 border border-treetino-light/20 hover:border-treetino-light text-[10px] font-bold px-3 py-1.5 rounded-xl transition-all flex items-center justify-center gap-1 shadow-sm hover:shadow-treetino-light/20"
                               >
-                                Zobrazit
+                                <Eye className="w-3.5 h-3.5 shrink-0" />
+                                <span>Detail</span>
                               </button>
                             </td>
                           </tr>
