@@ -185,6 +185,7 @@ export default function MapCanvas({
                         <Marker3D
                             position={{ lat: searchPin.lat, lng: searchPin.lng }}
                             altitudeMode={AltitudeMode.RELATIVE_TO_GROUND}
+                            drawsWhenOccluded={true}
                         >
                             <Pin
                                 background="#ef4444"
@@ -234,6 +235,7 @@ function DealMarker({
                 ref={markerRef}
                 position={{ lat: config.lat, lng: config.lon, altitude: 0 }}
                 altitudeMode={AltitudeMode.CLAMP_TO_GROUND}
+                drawsWhenOccluded={true}
                 onClick={(e: any) => {
                     if (e && e.stopPropagation) e.stopPropagation();
                     if (e && e.preventDefault) e.preventDefault();
@@ -355,6 +357,7 @@ function PinOverlay({ pin, potential, onRemove }: { pin: PinLocation, potential?
             ref={markerRef}
             position={{ lat: pin.lat, lng: pin.lng, altitude: 0 }}
             altitudeMode={AltitudeMode.CLAMP_TO_GROUND}
+            drawsWhenOccluded={true}
             onClick={(e: any) => {
                 if (e && e.stopPropagation) e.stopPropagation();
                 if (e && e.preventDefault) e.preventDefault();
