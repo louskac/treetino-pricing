@@ -7,6 +7,7 @@ from fastapi.responses import Response, FileResponse
 import traceback
 from datetime import datetime
 from pydantic import BaseModel
+from typing import List, Optional
 from fastapi.middleware.cors import CORSMiddleware
 import httpx
 from .calculator import calculate_roi, CalculatorParams
@@ -99,6 +100,38 @@ class SignMediationRequest(BaseModel):
     address: str
     representative: str
     location: str
+
+class ConfigDict(BaseModel):
+    lat: float
+    lon: float
+    pins_json: str
+    energy_price: float
+    sunny_days: int
+    windy_days: int
+    wind_hours: int
+    ai_optimization: int
+    web3_enabled: int
+    building_consumption: float
+    discount: float
+    total_price: float
+    commission_forecast: float
+    pdf_path: Optional[str] = None
+
+class SyncDeal(BaseModel):
+    client_name: str
+    agent_name: str
+    status: str
+    created_at: str
+    updated_at: str
+    ico: Optional[str] = None
+    dic: Optional[str] = None
+    client_logo: Optional[str] = None
+    pdf_path: Optional[str] = None
+    config: Optional[ConfigDict] = None
+
+class SyncRequest(BaseModel):
+    user_id: int
+    deals: List[SyncDeal]
 
 router = APIRouter()
 
@@ -270,6 +303,69 @@ def handle_create_deal(req: CreateDealRequest):
     try:
         deal_id = create_deal(req.user_id, req.partner_id, req.client_name, req.agent_name)
         return {"id": deal_id, "status": "success"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/deals/sync")
+def sync_deals(req: SyncRequest):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        try:
+            # Verify user exists
+            user_exists = conn.execute("SELECT partner_id FROM users WHERE id = ?", (req.user_id,)).fetchone()
+            if not user_exists:
+                raise HTTPException(status_code=401, detail="Uživatel nebyl nalezen")
+                
+            partner_id = user_exists["partner_id"]
+            
+            for d in req.deals:
+                # Check if this deal already exists in the backend for this user (by client name and created_at)
+                existing = conn.execute(
+                    "SELECT id FROM deals WHERE user_id = ? AND client_name = ? AND created_at = ?",
+                    (req.user_id, d.client_name, d.created_at)
+                ).fetchone()
+                
+                if not existing:
+                    # Insert deal
+                    cursor.execute("""
+                        INSERT INTO deals (user_id, partner_id, client_name, agent_name, status, ico, dic, client_logo, pdf_path, created_at, updated_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+                    """, (req.user_id, partner_id, d.client_name, d.agent_name, d.status, d.ico, d.dic, d.client_logo, d.pdf_path, d.created_at, d.updated_at))
+                    deal_id = cursor.lastrowid
+                    
+                    # Insert configuration if it exists
+                    if d.config:
+                        cfg = d.config
+                        cursor.execute("""
+                            INSERT INTO configurations (
+                                deal_id, lat, lon, pins_json, energy_price, sunny_days, windy_days, wind_hours, 
+                                ai_optimization, web3_enabled, building_consumption, discount, total_price, 
+                                commission_forecast, pdf_path
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+                        """, (deal_id, cfg.lat, cfg.lon, cfg.pins_json, cfg.energy_price, cfg.sunny_days, cfg.windy_days, cfg.wind_hours,
+                              cfg.ai_optimization, cfg.web3_enabled, cfg.building_consumption, cfg.discount, cfg.total_price,
+                              cfg.commission_forecast, cfg.pdf_path or ""))
+                        
+                        # Update commission entry
+                        deal_status = d.status
+                        comm_status = "Forecasted"
+                        if deal_status == "Won":
+                            comm_status = "Pending"
+                        elif deal_status in ["Lost", "Rejected"]:
+                            comm_status = "Cancelled"
+                            
+                        cursor.execute("""
+                            INSERT INTO commissions (deal_id, partner_id, amount_czk, status)
+                            VALUES (?, ?, ?, ?);
+                        """, (deal_id, partner_id, cfg.commission_forecast, comm_status))
+            
+            conn.commit()
+            return {"status": "success"}
+        finally:
+            conn.close()
+    except HTTPException as e:
+        raise e
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

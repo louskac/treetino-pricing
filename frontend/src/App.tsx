@@ -108,28 +108,127 @@ export default function App() {
     
     if (cachedUserObj) {
       try {
-        setActiveUser(JSON.parse(cachedUserObj));
+        const user = JSON.parse(cachedUserObj);
+        setActiveUser(user);
         setCrmActive(true); // Auto-open CRM portal
+        
+        // Load active draft configuration from localStorage
+        const cachedDraft = localStorage.getItem(`treetino_draft_${user.id}`);
+        if (cachedDraft) {
+          const draft = JSON.parse(cachedDraft);
+          if (draft.location) setLocation(draft.location);
+          if (draft.result) setResult(draft.result);
+          if (draft.energyCost !== undefined) setEnergyCost(draft.energyCost);
+          if (draft.web3Enabled !== undefined) setWeb3Enabled(draft.web3Enabled);
+          if (draft.esgEnabled !== undefined) setEsgEnabled(draft.esgEnabled);
+        }
       } catch (e) {
         console.error('Failed to parse cached session', e);
       }
     }
   }, []);
 
+  // ─── Save active draft configuration to localStorage ──────────────────
+  useEffect(() => {
+    if (activeUser) {
+      const draft = {
+        location,
+        result,
+        energyCost,
+        web3Enabled,
+        esgEnabled,
+        activeDealId: activeDeal?.id || null
+      };
+      localStorage.setItem(`treetino_draft_${activeUser.id}`, JSON.stringify(draft));
+    }
+  }, [location, result, energyCost, web3Enabled, esgEnabled, activeDeal, activeUser]);
+
   // ─── Fetch All Deals ──────────────────────────────────
   const fetchAllDeals = async () => {
     if (!activeUser) return;
     try {
       const { data } = await axios.get<Deal[]>(`${BACKEND_URL}/deals?user_id=${activeUser.id}`);
+      
+      // Check if server database was reset and sync deals from localStorage
+      const localDealsStr = localStorage.getItem(`treetino_deals_${activeUser.id}`);
+      const localDeals: Deal[] = localDealsStr ? JSON.parse(localDealsStr) : [];
+      
+      if (localDeals.length > 0) {
+        const serverHasAll = localDeals.every(ld => 
+          data.some(sd => sd.client_name === ld.client_name && sd.created_at === ld.created_at)
+        );
+        
+        if (!serverHasAll) {
+          // Sync missing deals to server
+          await axios.post(`${BACKEND_URL}/deals/sync`, {
+            user_id: activeUser.id,
+            deals: localDeals.map(ld => ({
+              client_name: ld.client_name,
+              agent_name: ld.agent_name,
+              status: ld.status,
+              created_at: ld.created_at,
+              updated_at: ld.updated_at,
+              ico: ld.ico,
+              dic: ld.dic,
+              client_logo: ld.client_logo,
+              pdf_path: ld.pdf_path,
+              config: ld.config
+            }))
+          });
+          
+          // Re-fetch updated deals list from server (with new IDs)
+          const { data: updatedData } = await axios.get<Deal[]>(`${BACKEND_URL}/deals?user_id=${activeUser.id}`);
+          setAllDeals(updatedData);
+          localStorage.setItem(`treetino_deals_${activeUser.id}`, JSON.stringify(updatedData));
+          
+          // Map activeDeal to the newly synced deal ID in the fresh database
+          if (activeDeal) {
+            const newActive = updatedData.find(d => d.client_name === activeDeal.client_name && d.created_at === activeDeal.created_at);
+            if (newActive) setActiveDeal(newActive);
+          } else {
+            const cachedDraft = localStorage.getItem(`treetino_draft_${activeUser.id}`);
+            if (cachedDraft) {
+              const draft = JSON.parse(cachedDraft);
+              if (draft.activeDealId) {
+                const oldLocalDeal = localDeals.find(ld => ld.id === draft.activeDealId);
+                if (oldLocalDeal) {
+                  const newActive = updatedData.find(d => d.client_name === oldLocalDeal.client_name && d.created_at === oldLocalDeal.created_at);
+                  if (newActive) setActiveDeal(newActive);
+                }
+              }
+            }
+          }
+          return;
+        }
+      }
+      
       setAllDeals(data);
+      localStorage.setItem(`treetino_deals_${activeUser.id}`, JSON.stringify(data));
+      
       if (activeDeal) {
         const updatedActive = data.find(d => d.id === activeDeal.id);
         if (updatedActive) {
           setActiveDeal(updatedActive);
         }
+      } else {
+        // Load active deal from draft if cached
+        const cachedDraft = localStorage.getItem(`treetino_draft_${activeUser.id}`);
+        if (cachedDraft) {
+          const draft = JSON.parse(cachedDraft);
+          if (draft.activeDealId) {
+            const found = data.find(d => d.id === draft.activeDealId);
+            if (found) setActiveDeal(found);
+          }
+        }
       }
     } catch (e) {
       console.error('Failed to fetch all deals', e);
+      // Fallback to local storage cache if server is down or returns error
+      const localDealsStr = localStorage.getItem(`treetino_deals_${activeUser.id}`);
+      if (localDealsStr) {
+        setAllDeals(JSON.parse(localDealsStr));
+      }
+      
       if (axios.isAxiosError(e) && e.response) {
         if ([400, 401, 404].includes(e.response.status)) {
           handleLogout();
@@ -163,6 +262,10 @@ export default function App() {
     setResult(null);
     localStorage.removeItem('treetino_user');
     sessionStorage.removeItem('treetino_user');
+    if (activeUser) {
+      localStorage.removeItem(`treetino_draft_${activeUser.id}`);
+      localStorage.removeItem(`treetino_deals_${activeUser.id}`);
+    }
     setCrmActive(false);
   };
 
