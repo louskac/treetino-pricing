@@ -320,13 +320,43 @@ async def handle_generate_pdf(request: dict):
         deal_id = request.get("deal_id")
         user_id = request.get("user_id")
         partner_id = request.get("partner_id")
+        
+        # Clean user_id and partner_id parameters
+        try:
+            user_id = int(user_id) if user_id is not None else None
+        except (ValueError, TypeError):
+            user_id = None
+
+        if partner_id in ("", 0, "null", "undefined", None):
+            partner_id = None
+        else:
+            try:
+                partner_id = int(partner_id)
+            except (ValueError, TypeError):
+                partner_id = None
+
+        # Verify whether the deal_id actually exists in the database.
+        # If it doesn't exist, reset deal_id to None so that a new one is created.
+        if deal_id:
+            try:
+                deal_id = int(deal_id)
+                conn = get_db_connection()
+                try:
+                    deal_exists = conn.execute("SELECT 1 FROM deals WHERE id = ?", (deal_id,)).fetchone()
+                    if not deal_exists:
+                        deal_id = None
+                finally:
+                    conn.close()
+            except (ValueError, TypeError):
+                deal_id = None
+
         agent_name = request.get("agent_name")
         client_name = request.get("clientName", "ACME s.r.o.")
         ico = request.get("ico", "")
         dic = request.get("dic", "")
         client_logo = request.get("clientLogoBase64", "")
         
-        # If deal_id is not provided, create a new deal
+        # If deal_id is not provided (or was reset), create a new deal
         if not deal_id and user_id and agent_name:
             deal_id = create_deal(
                 user_id=user_id,
@@ -383,6 +413,8 @@ async def handle_generate_pdf(request: dict):
                 conn.close()
 
         return Response(content=pdf_bytes, media_type="application/pdf")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         error_details = traceback.format_exc()
         raise HTTPException(status_code=500, detail=error_details)

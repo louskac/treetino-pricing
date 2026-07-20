@@ -290,6 +290,27 @@ def get_deals(user_id=None):
 def create_deal(user_id, partner_id, client_name, agent_name, status="Prepared"):
     conn = get_db_connection()
     try:
+        # 1. Verify user exists
+        user_row = conn.execute("SELECT partner_id FROM users WHERE id = ?", (user_id,)).fetchone()
+        if not user_row:
+            raise ValueError(f"Uživatel s ID {user_id} neexistuje.")
+            
+        # 2. Clean partner_id parameter
+        if partner_id in ("", 0, "null", "undefined", None):
+            partner_id = None
+        else:
+            try:
+                partner_id = int(partner_id)
+            except (ValueError, TypeError):
+                partner_id = None
+                
+        # 3. Verify partner exists if provided, fallback to user's database partner_id
+        if partner_id is not None:
+            partner_exists = conn.execute("SELECT 1 FROM partners WHERE id = ?", (partner_id,)).fetchone()
+            if not partner_exists:
+                db_partner_id = user_row["partner_id"]
+                partner_id = int(db_partner_id) if db_partner_id is not None else None
+
         now_str = datetime.now().isoformat()
         cursor = conn.cursor()
         cursor.execute("""
