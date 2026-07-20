@@ -130,6 +130,11 @@ export default function App() {
       }
     } catch (e) {
       console.error('Failed to fetch all deals', e);
+      if (axios.isAxiosError(e) && e.response) {
+        if ([400, 401, 404].includes(e.response.status)) {
+          handleLogout();
+        }
+      }
     }
   };
 

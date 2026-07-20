@@ -194,7 +194,9 @@ def read_deals(user_id: int = Query(None)):
             conn = get_db_connection()
             try:
                 row = conn.execute("SELECT is_superadmin FROM users WHERE id = ?", (user_id,)).fetchone()
-                is_admin = row["is_superadmin"] if row else 0
+                if not row:
+                    raise HTTPException(status_code=401, detail="Session expired or user not found.")
+                is_admin = row["is_superadmin"]
             finally:
                 conn.close()
             
@@ -203,6 +205,8 @@ def read_deals(user_id: int = Query(None)):
             else:
                 return get_deals(user_id=user_id)  # Regular user only sees their own deals
         return []
+    except HTTPException as e:
+        raise e
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
