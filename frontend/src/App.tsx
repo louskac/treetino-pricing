@@ -93,6 +93,13 @@ export default function App() {
   const [buildingConsumption, setBuildingConsumption] = useState(360);
   const [discount, setDiscount] = useState(5.0);
 
+  const [web3Enabled, setWeb3Enabled] = useState(false);
+  const [esgEnabled, setEsgEnabled] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<CalcResult | null>(null);
+  const [showModal, setShowModal] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   // ─── CRM & Partner Portal State ───────────────────────
   const [crmActive, setCrmActive] = useState(false);
   const [activeUser, setActiveUser] = useState<User | null>(null);
@@ -287,14 +294,6 @@ export default function App() {
       }
     }
   }, [activeUser, discount]);
-
-  const [web3Enabled, setWeb3Enabled] = useState(false);
-  const [esgEnabled, setEsgEnabled] = useState(true);
-
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<CalcResult | null>(null);
-  const [showModal, setShowModal] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   // ─── Location selected from map ───────────────────────
   const handleLocationSelect = useCallback((loc: SelectedLocation) => {
