@@ -347,18 +347,19 @@ def sync_deals(req: SyncRequest):
                               cfg.ai_optimization, cfg.web3_enabled, cfg.building_consumption, cfg.discount, cfg.total_price,
                               cfg.commission_forecast, cfg.pdf_path or ""))
                         
-                        # Update commission entry
-                        deal_status = d.status
-                        comm_status = "Forecasted"
-                        if deal_status == "Won":
-                            comm_status = "Pending"
-                        elif deal_status in ["Lost", "Rejected"]:
-                            comm_status = "Cancelled"
-                            
-                        cursor.execute("""
-                            INSERT INTO commissions (deal_id, partner_id, amount_czk, status)
-                            VALUES (?, ?, ?, ?);
-                        """, (deal_id, partner_id, cfg.commission_forecast, comm_status))
+                        # Update commission entry if partner_id is available
+                        if partner_id is not None:
+                            deal_status = d.status
+                            comm_status = "Forecasted"
+                            if deal_status == "Won":
+                                comm_status = "Pending"
+                            elif deal_status in ["Lost", "Rejected"]:
+                                comm_status = "Cancelled"
+                                
+                            cursor.execute("""
+                                INSERT INTO commissions (deal_id, partner_id, amount_czk, status)
+                                VALUES (?, ?, ?, ?);
+                            """, (deal_id, partner_id, cfg.commission_forecast, comm_status))
             
             conn.commit()
             return {"status": "success"}

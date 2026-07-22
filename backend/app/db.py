@@ -295,14 +295,16 @@ def create_deal(user_id, partner_id, client_name, agent_name, status="Prepared")
         if not user_row:
             raise ValueError(f"Uživatel s ID {user_id} neexistuje.")
             
-        # 2. Clean partner_id parameter
+        # 2. Clean partner_id parameter and fallback to user's partner_id if not provided
         if partner_id in ("", 0, "null", "undefined", None):
-            partner_id = None
+            db_partner_id = user_row["partner_id"]
+            partner_id = int(db_partner_id) if db_partner_id is not None else None
         else:
             try:
                 partner_id = int(partner_id)
             except (ValueError, TypeError):
-                partner_id = None
+                db_partner_id = user_row["partner_id"]
+                partner_id = int(db_partner_id) if db_partner_id is not None else None
                 
         # 3. Verify partner exists if provided, fallback to user's database partner_id
         if partner_id is not None:
@@ -397,7 +399,11 @@ def save_deal_config(deal_id, lat, lon, pins_json, energy_price, sunny_days, win
                   commission_forecast, pdf_path or ""))
             
         # Update status to Configured if it was Prepared
-        deal_row = conn.execute("SELECT partner_id, status FROM deals WHERE id=?", (deal_id,)).fetchone()
+        deal_row = conn.execute("SELECT partner_id, status, user_id FROM deals WHERE id=?", (deal_id,)).fetchone()
+        if not deal_row:
+            conn.commit()
+            return
+
         deal_status = deal_row["status"]
         if deal_status == "Prepared":
             cursor.execute("UPDATE deals SET status='In Progress', updated_at=? WHERE id=?", (now_str, deal_id))
@@ -406,26 +412,32 @@ def save_deal_config(deal_id, lat, lon, pins_json, energy_price, sunny_days, win
             cursor.execute("UPDATE deals SET updated_at=? WHERE id=?", (now_str, deal_id))
         
         partner_id = deal_row["partner_id"]
+        if partner_id is None and deal_row["user_id"]:
+            user_row = conn.execute("SELECT partner_id FROM users WHERE id=?", (deal_row["user_id"],)).fetchone()
+            if user_row and user_row["partner_id"]:
+                partner_id = user_row["partner_id"]
+                cursor.execute("UPDATE deals SET partner_id=? WHERE id=?", (partner_id, deal_id))
         
-        # Update/Create commission entry
-        comm_status = "Forecasted"
-        if deal_status == "Won":
-            comm_status = "Pending"
-        elif deal_status in ["Lost", "Rejected"]:
-            comm_status = "Cancelled"
-            
-        comm_exists = conn.execute("SELECT 1 FROM commissions WHERE deal_id = ?", (deal_id,)).fetchone()
-        if comm_exists:
-            cursor.execute("""
-                UPDATE commissions
-                SET amount_czk = ?, status = ?
-                WHERE deal_id = ? AND status != 'Paid';
-            """, (commission_forecast, comm_status, deal_id))
-        else:
-            cursor.execute("""
-                INSERT INTO commissions (deal_id, partner_id, amount_czk, status)
-                VALUES (?, ?, ?, ?);
-            """, (deal_id, partner_id, commission_forecast, comm_status))
+        # Update/Create commission entry if partner_id is available
+        if partner_id is not None:
+            comm_status = "Forecasted"
+            if deal_status == "Won":
+                comm_status = "Pending"
+            elif deal_status in ["Lost", "Rejected"]:
+                comm_status = "Cancelled"
+                
+            comm_exists = conn.execute("SELECT 1 FROM commissions WHERE deal_id = ?", (deal_id,)).fetchone()
+            if comm_exists:
+                cursor.execute("""
+                    UPDATE commissions
+                    SET amount_czk = ?, status = ?
+                    WHERE deal_id = ? AND status != 'Paid';
+                """, (commission_forecast, comm_status, deal_id))
+            else:
+                cursor.execute("""
+                    INSERT INTO commissions (deal_id, partner_id, amount_czk, status)
+                    VALUES (?, ?, ?, ?);
+                """, (deal_id, partner_id, commission_forecast, comm_status))
             
         conn.commit()
     finally:
