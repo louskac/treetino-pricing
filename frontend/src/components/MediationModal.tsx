@@ -176,7 +176,17 @@ export default function MediationModal({ activeUser, onMediationSigned }: Props)
       onMediationSigned(data);
     } catch (err: any) {
       console.error(err);
-      setError('Nepodařilo se odeslat podepsanou smlouvu. Zkuste to prosím znovu.');
+      if (axios.isAxiosError(err) && err.response && [401, 404].includes(err.response.status)) {
+        localStorage.removeItem('treetino_user');
+        sessionStorage.removeItem('treetino_user');
+        if (activeUser) {
+          localStorage.removeItem(`treetino_draft_${activeUser.id}`);
+          localStorage.removeItem(`treetino_deals_${activeUser.id}`);
+        }
+        window.location.reload();
+      } else {
+        setError('Nepodařilo se odeslat podepsanou smlouvu. Zkuste to prosím znovu.');
+      }
     } finally {
       setLoading(false);
     }

@@ -168,8 +168,8 @@ def handle_login(req: LoginRequest):
 
 @router.post("/users/{user_id}/sign-nda")
 def handle_sign_nda(user_id: int, req: SignNdaRequest):
+    conn = get_db_connection()
     try:
-        conn = get_db_connection()
         user = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
         if not user:
             raise HTTPException(status_code=404, detail="Uživatel nenalezen")
@@ -190,13 +190,17 @@ def handle_sign_nda(user_id: int, req: SignNdaRequest):
             WHERE u.id = ?;
         """, (user_id,)).fetchone()
         return dict(row) if row else None
+    except HTTPException as e:
+        raise e
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
 
 @router.post("/users/{user_id}/sign-mediation")
 def handle_sign_mediation(user_id: int, req: SignMediationRequest):
+    conn = get_db_connection()
     try:
-        conn = get_db_connection()
         user = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
         if not user:
             raise HTTPException(status_code=404, detail="Uživatel nenalezen")
@@ -217,8 +221,12 @@ def handle_sign_mediation(user_id: int, req: SignMediationRequest):
             WHERE u.id = ?;
         """, (user_id,)).fetchone()
         return dict(row) if row else None
+    except HTTPException as e:
+        raise e
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
 
 @router.get("/deals")
 def read_deals(user_id: int = Query(None)):
@@ -606,8 +614,8 @@ async def handle_calculate_roi(request: ROICalculationRequest):
 
 @router.get("/users/{user_id}/nda/download")
 def download_user_nda(user_id: int):
+    conn = get_db_connection()
     try:
-        conn = get_db_connection()
         user = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
         if not user:
             raise HTTPException(status_code=404, detail="Uživatel nenalezen")
@@ -626,13 +634,17 @@ def download_user_nda(user_id: int):
                 "Content-Disposition": f"attachment; filename={filename}"
             }
         )
+    except HTTPException as e:
+        raise e
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
 
 @router.get("/users/{user_id}/mediation/download")
 def download_user_mediation(user_id: int):
+    conn = get_db_connection()
     try:
-        conn = get_db_connection()
         user = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
         if not user:
             raise HTTPException(status_code=404, detail="Uživatel nenalezen")
@@ -651,8 +663,12 @@ def download_user_mediation(user_id: int):
                 "Content-Disposition": f"attachment; filename={filename}"
             }
         )
+    except HTTPException as e:
+        raise e
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
 
 # Mount the router both at the root (for localhost) and at /api (for Vercel)
 app.include_router(router)
